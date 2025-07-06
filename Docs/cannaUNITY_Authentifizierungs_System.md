@@ -1,9 +1,6 @@
-cannaUNITY Authentifizierungs-System
-🔐 „Quantum-secure, multiverse-proof, and definitely over-engineered – just like Rick likes it.“
-
 # cannaUNITY Authentifizierungssystem
 
-**Sicherheit auf Banken-Niveau für Cannabis Social Club Verwaltung**
+**🔐 Quantum-secure, multiverse-proof, and definitely over-engineered – just like Rick likes it.**
 
 ![Security Badge](https://img.shields.io/badge/Sicherheit-Enterprise%20Grade-green)
 ![Encryption Badge](https://img.shields.io/badge/Verschlüsselung-AES--256-blue)
@@ -448,7 +445,7 @@ Der Online-Server enthält nur anonymisierte UIDs. Persönliche Daten sind aussc
 
 ### Wie oft müssen Mitglieder neue QR-Codes holen?
 
-- Bei normalem Gebrauch: Alle 12 Monate
+- Bei normalem Gebrauch: Alle 6 Monate
 - Bei Geräteverlust: Sofort
 - Bei Löschung der APP: Sofort
 - Bei Sicherheitsvorfällen: Nach Ankündigung
@@ -466,12 +463,3 @@ cannaUNITY ist ein freies Open-Source-Projekt unter der MIT-Lizenz.
 Die aktuelle Version v0.6.20-pa dient ausschließlich der Mitentwicklung und Systemintegration. Die Software wird ohne Gewährleistung bereitgestellt. Die Nutzung erfolgt auf eigenes Risiko. Eine Haftung für Schäden oder Datenverluste wird ausgeschlossen.
 
 Copyright (c) 2025 Sascha Dämgen IT and More
-
-                                                   /$$   /$$ /$$   /$$ /$$$$$$ /$$$$$$$$ /$$     /$$        /$$$$$$      /$$$$$$      /$$$$$$   /$$$$$$ 
-                                                  | $$  | $$| $$$ | $$|_  $$_/|__  $$__/|  $$   /$$/       /$$$_  $$    /$$__  $$    /$$__  $$ /$$$_  $$
-  /$$$$$$$  /$$$$$$  /$$$$$$$  /$$$$$$$   /$$$$$$ | $$  | $$| $$$$| $$  | $$     | $$    \  $$ /$$/       | $$$$\ $$   | $$  \__/   |__/  \ $$| $$$$\ $$
- /$$_____/ |____  $$| $$__  $$| $$__  $$ |____  $$| $$  | $$| $$ $$ $$  | $$     | $$     \  $$$$/        | $$ $$ $$   | $$$$$$$      /$$$$$$/| $$ $$ $$
-| $$        /$$$$$$$| $$  \ $$| $$  \ $$  /$$$$$$$| $$  | $$| $$  $$$$  | $$     | $$      \  $$/         | $$\ $$$$   | $$__  $$    /$$____/ | $$\ $$$$
-| $$       /$$__  $$| $$  | $$| $$  | $$ /$$__  $$| $$  | $$| $$\  $$$  | $$     | $$       | $$          | $$ \ $$$   | $$  \ $$   | $$      | $$ \ $$$
-|  $$$$$$$|  $$$$$$$| $$  | $$| $$  | $$|  $$$$$$$|  $$$$$$/| $$ \  $$ /$$$$$$   | $$       | $$          |  $$$$$$//$$|  $$$$$$//$$| $$$$$$$$|  $$$$$$/
- \_______/ \_______/|__/  |__/|__/  |__/ \_______/ \______/ |__/  \__/|______/   |__/       |__/           \______/|__/ \______/|__/|________/ \______/

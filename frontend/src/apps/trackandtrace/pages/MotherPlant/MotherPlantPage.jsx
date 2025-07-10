@@ -12,6 +12,7 @@ import LoadingIndicator from '@/components/common/LoadingIndicator'
 import DestroyDialog from '@/components/dialogs/DestroyDialog'
 import CreateCuttingDialog from '@/components/dialogs/CreateCuttingDialog'
 import AnimatedTabPanel from '@/components/common/AnimatedTabPanel'
+import RatingDialog from '@/components/dialogs/RatingDialog' // NEU
 
 // Spezifische Komponenten
 import MotherPlantTable from './components/MotherPlantTable'
@@ -38,6 +39,11 @@ export default function MotherPlantPage() {
   const [selectedBatch, setSelectedBatch] = useState(null)
   const [selectedPlants, setSelectedPlants] = useState({})
   const [loadingOptions, setLoadingOptions] = useState(false)
+  
+  // NEU: States für Rating Dialog
+  const [openRatingDialog, setOpenRatingDialog] = useState(false)
+  const [selectedBatchForRating, setSelectedBatchForRating] = useState(null)
+  const [selectedPlantForRating, setSelectedPlantForRating] = useState(null)
   
   // Animationseinstellungen mit neuem Hook abrufen
   const animSettings = useAnimationSettings('slide', 500, true);
@@ -79,6 +85,20 @@ export default function MotherPlantPage() {
   // States für Image Upload Modal
   const [openImageModal, setOpenImageModal] = useState(false)
   const [selectedBatchForImages, setSelectedBatchForImages] = useState(null)
+
+  // NEU: Handler für Rating Dialog
+  const handleOpenRatingDialog = (batch, plant = null) => {
+    setSelectedBatchForRating(batch)
+    setSelectedPlantForRating(plant)
+    setOpenRatingDialog(true)
+  }
+
+  const handleCloseRatingDialog = () => {
+    setOpenRatingDialog(false)
+    setSelectedBatchForRating(null)
+    setSelectedPlantForRating(null)
+    refreshData() // Daten neu laden
+  }
 
   const loadMotherBatches = async (page = 1) => {
     setLoading(true)
@@ -707,6 +727,7 @@ export default function MotherPlantPage() {
               togglePlantSelection={togglePlantSelection}
               selectAllPlantsInBatch={selectAllPlantsInBatch}
               onOpenImageModal={handleOpenImageModal}
+              onOpenRatingDialog={handleOpenRatingDialog}
             />
           </AnimatedTabPanel>
           
@@ -739,6 +760,7 @@ export default function MotherPlantPage() {
               togglePlantSelection={togglePlantSelection}
               selectAllPlantsInBatch={selectAllPlantsInBatch}
               onOpenImageModal={handleOpenImageModal}
+              onOpenRatingDialog={handleOpenRatingDialog}
             />
           </AnimatedTabPanel>
           
@@ -771,6 +793,7 @@ export default function MotherPlantPage() {
               togglePlantSelection={togglePlantSelection}
               selectAllPlantsInBatch={selectAllPlantsInBatch}
               onOpenImageModal={handleOpenImageModal}
+              onOpenRatingDialog={handleOpenRatingDialog}
             />
           </AnimatedTabPanel>
         </>
@@ -837,6 +860,15 @@ export default function MotherPlantPage() {
             ]
           }
         ]}
+      />
+
+      {/* NEU: Rating Dialog */}
+      <RatingDialog
+        open={openRatingDialog}
+        onClose={handleCloseRatingDialog}
+        batch={selectedBatchForRating}
+        plant={selectedPlantForRating}
+        onRatingCreated={handleCloseRatingDialog}
       />
     </Container>
   )

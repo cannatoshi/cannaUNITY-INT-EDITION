@@ -9,7 +9,7 @@ from .api_views import (
     StrainCardViewSet, SeedPurchaseImageViewSet, MotherPlantBatchImageViewSet,
     CuttingBatchImageViewSet, BloomingCuttingBatchImageViewSet, FloweringPlantBatchImageViewSet,
     HarvestBatchViewSet, HarvestBatchImageViewSet, DryingBatchImageViewSet, ProcessingBatchImageViewSet,
-    LabTestingBatchImageViewSet, PackagingBatchImageViewSet,
+    LabTestingBatchImageViewSet, PackagingBatchImageViewSet, MotherPlantRatingViewSet,
     validate_distribution_limits
 )
 
@@ -38,6 +38,7 @@ router.register(r'processing-batch-images', ProcessingBatchImageViewSet, basenam
 router.register(r'lab-testing-batch-images', LabTestingBatchImageViewSet, basename='lab-testing-batch-images')
 router.register(r'packaging-batch-images', PackagingBatchImageViewSet, basename='packaging-batch-images')
 router.register(r'strain-cards', StrainCardViewSet, basename='strain-cards')
+router.register(r'motherplant-ratings', MotherPlantRatingViewSet, basename='motherplantrating')
 
 urlpatterns = [
     # Spezifische Endpunkte

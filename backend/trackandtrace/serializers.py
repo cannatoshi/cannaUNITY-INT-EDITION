@@ -7,7 +7,7 @@ from .models import (
     PackagingBatch, PackagingUnit, ProductDistribution, SeedPurchaseImage, 
     MotherPlantBatchImage, CuttingBatchImage, BloomingCuttingBatchImage,
     FloweringPlantBatchImage, HarvestBatchImage, DryingBatchImage, ProcessingBatchImage,
-    LabTestingBatchImage, PackagingBatchImage,
+    LabTestingBatchImage, PackagingBatchImage, MotherPlantRating,
 )
 from members.models import Member
 from rooms.models import Room
@@ -392,6 +392,42 @@ class SeedPurchaseSerializer(serializers.ModelSerializer):
     
     def get_image_count(self, obj):
         return obj.images.count()
+    
+
+class MotherPlantRatingSerializer(serializers.ModelSerializer):
+    # Read-only Felder für Anzeige
+    rated_by = MemberSerializer(read_only=True)
+    rated_by_id = serializers.PrimaryKeyRelatedField(
+        queryset=Member.objects.all(),
+        source='rated_by',
+        write_only=True,
+        required=False
+    )
+    
+    # Berechnete Felder
+    overall_score = serializers.SerializerMethodField()
+    regrowth_speed_display = serializers.CharField(source='get_regrowth_speed_display', read_only=True)
+    
+    # Optionale Verknüpfung zum Stecklingsschnitt
+    cutting_batch_number = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = MotherPlantRating
+        fields = [
+            'id', 'mother_plant', 'overall_health', 'health_notes',
+            'growth_structure', 'growth_notes', 'regeneration_ability', 
+            'regeneration_notes', 'regrowth_speed', 'regrowth_speed_display',
+            'regrowth_speed_rating', 'cuttings_harvested', 'cutting_quality',
+            'rooting_success_rate', 'rated_by', 'rated_by_id', 'created_at',
+            'overall_score', 'cutting_batch', 'cutting_batch_number'
+        ]
+        read_only_fields = ['id', 'created_at', 'overall_score']
+    
+    def get_overall_score(self, obj):
+        return round(obj.overall_score, 1)
+    
+    def get_cutting_batch_number(self, obj):
+        return obj.cutting_batch.batch_number if obj.cutting_batch else None
 
 
 class MotherPlantSerializer(serializers.ModelSerializer):
@@ -404,13 +440,32 @@ class MotherPlantSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True
     )
-    
+    ratings = MotherPlantRatingSerializer(many=True, read_only=True)
+    average_rating = serializers.SerializerMethodField()
+    total_cuttings_produced = serializers.ReadOnlyField()
+    last_rating = MotherPlantRatingSerializer(read_only=True)
+    rating_count = serializers.ReadOnlyField()
+    premium_marked_by = MemberSerializer(read_only=True)
+    premium_marked_by_id = serializers.PrimaryKeyRelatedField(
+        queryset=Member.objects.all(),
+        source='premium_marked_by',
+        write_only=True,
+        required=False,
+        allow_null=True
+    )
     class Meta:
         model = MotherPlant
         fields = [
             'id', 'batch_number', 'notes', 'is_destroyed', 'destroy_reason', 
-            'destroyed_at', 'created_at', 'destroyed_by', 'destroyed_by_id'
+            'destroyed_at', 'created_at', 'destroyed_by', 'destroyed_by_id',
+                        'is_premium_mother', 'premium_marked_at', 'premium_marked_by', 
+            'premium_marked_by_id', 'ratings', 'average_rating', 
+            'total_cuttings_produced', 'last_rating', 'rating_count'
         ]
+    def get_average_rating(self, obj):
+        avg = obj.average_rating
+        return round(avg, 1) if avg else None
+
 
 class MotherPlantBatchSerializer(serializers.ModelSerializer):
     # Serializers für Mitglieder und Räume
@@ -445,6 +500,9 @@ class MotherPlantBatchSerializer(serializers.ModelSerializer):
 
     images = MotherPlantBatchImageSerializer(many=True, read_only=True)
     image_count = serializers.SerializerMethodField()
+
+    premium_plants_count = serializers.SerializerMethodField()
+    average_batch_rating = serializers.SerializerMethodField()
     
     class Meta:
         model = MotherPlantBatch
@@ -453,7 +511,7 @@ class MotherPlantBatchSerializer(serializers.ModelSerializer):
             'created_at', 'member', 'member_id', 'room', 'room_id',
             'seed_strain', 'seed_batch_number', 'active_plants_count', 
             'destroyed_plants_count', 'converted_to_cuttings_count',
-            'images', 'image_count'
+            'images', 'image_count', 'premium_plants_count', 'average_batch_rating'
         ]
     
     def get_seed_strain(self, obj):
@@ -479,6 +537,17 @@ class MotherPlantBatchSerializer(serializers.ModelSerializer):
     def get_image_count(self, obj):
         """Zählt die verknüpften Bilder"""
         return obj.images.count()
+    
+    def get_premium_plants_count(self, obj):
+        return obj.plants.filter(is_premium_mother=True, is_destroyed=False).count()
+    
+    def get_average_batch_rating(self, obj):
+        """Durchschnittliche Bewertung aller Pflanzen im Batch"""
+        ratings = []
+        for plant in obj.plants.filter(is_destroyed=False):
+            if plant.average_rating:
+                ratings.append(plant.average_rating)
+        return round(sum(ratings) / len(ratings), 1) if ratings else None
 
 
 class FloweringPlantSerializer(serializers.ModelSerializer):

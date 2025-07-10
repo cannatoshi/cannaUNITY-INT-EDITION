@@ -9,6 +9,7 @@ import ScienceIcon from '@mui/icons-material/Science'
 import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment'
 import ContentCutIcon from '@mui/icons-material/ContentCut'
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera'
+import StarIcon from '@mui/icons-material/Star'
 
 // API-Client importieren
 import api from '@/utils/api'
@@ -50,7 +51,8 @@ const MotherPlantTable = ({
   cuttingsTotalPages,
   onCuttingsPageChange,
   loadCuttingsForBatch,
-  onOpenImageModal // NEU
+  onOpenImageModal,
+  onOpenRatingDialog // NEU
 }) => {
   // Zustände für die vernichteten Pflanzen-Details
   const [destroyedPlantsDetails, setDestroyedPlantsDetails] = useState({});
@@ -739,6 +741,7 @@ const MotherPlantTable = ({
                             <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>UUID</TableCell>
                             <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Erstellt am</TableCell>
                             <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Kultiviert von</TableCell>
+                            <TableCell align="center" sx={{ color: 'white', fontWeight: 'bold' }}>Bewertung</TableCell>
                             <TableCell align="right" sx={{ color: 'white', fontWeight: 'bold' }}>Aktionen</TableCell>
                           </TableRow>
                         </TableHead>
@@ -771,49 +774,99 @@ const MotherPlantTable = ({
                                   (batch.member.display_name || `${batch.member.first_name} ${batch.member.last_name}`) 
                                   : "-"}
                               </TableCell>
-                              <TableCell align="right">
-                              {/* Button zum Erstellen von Stecklingen für eine spezifische Mutterpflanze */}
-                              <IconButton 
-                                size="small" 
-                                sx={{ 
-                                  color: 'white',
-                                  backgroundColor: 'primary.main',
-                                  '&:hover': {
-                                    backgroundColor: 'primary.dark'
-                                  },
-                                  width: '28px',
-                                  height: '28px',
-                                  mr: 1
-                                }}
-                                onClick={(e) => {
-                                  e.stopPropagation(); // Verhindert Akkordeon-Öffnen
-                                  onOpenCreateCuttingDialog(batch, plant); // Übergebe die spezifische Pflanze
-                                }}
-                              >
-                                <ContentCutIcon fontSize="small" />
-                              </IconButton>
                               
-                              {/* Button zum Vernichten */}
-                              <IconButton 
-                                size="small" 
-                                sx={{ 
-                                  color: 'white',
-                                  backgroundColor: 'error.main',
-                                  '&:hover': {
-                                    backgroundColor: 'error.dark'
-                                  },
-                                  width: '28px',
-                                  height: '28px'
-                                }}
-                                onClick={(e) => {
-                                  e.stopPropagation(); // Verhindert Akkordeon-Öffnen
-                                  togglePlantSelection(batch.id, plant.id);
-                                  onOpenDestroyDialog(batch);
-                                }}
-                              >
-                                <LocalFireDepartmentIcon fontSize="small" />
-                              </IconButton>
-                            </TableCell>
+                              {/* NEU: Bewertungs-Spalte */}
+                              <TableCell align="center">
+                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                                  {/* Anzeige der durchschnittlichen Bewertung */}
+                                  {plant.average_rating && (
+                                    <Typography variant="body2" sx={{ color: 'warning.main' }}>
+                                      ⭐ {plant.average_rating}
+                                    </Typography>
+                                  )}
+                                  
+                                  {/* Bewertungs-Button */}
+                                  <Tooltip title={`Pflanze bewerten (${plant.rating_count || 0} Bewertungen)`}>
+                                    <IconButton 
+                                      size="small" 
+                                      sx={{ 
+                                        color: plant.is_premium_mother ? 'warning.main' : 'action.active',
+                                        '&:hover': {
+                                          backgroundColor: plant.is_premium_mother ? 'warning.light' : 'action.hover'
+                                        }
+                                      }}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onOpenRatingDialog(batch, plant); // Übergebe beide: batch und plant
+                                      }}
+                                    >
+                                      <Badge badgeContent={plant.rating_count || 0} color="primary" max={99}>
+                                        <StarIcon fontSize="small" />
+                                      </Badge>
+                                    </IconButton>
+                                  </Tooltip>
+                                  
+                                  {/* Premium-Marker */}
+                                  {plant.is_premium_mother && (
+                                    <Tooltip title="Premium Mutterpflanze">
+                                      <Typography variant="caption" sx={{ 
+                                        backgroundColor: 'warning.light',
+                                        color: 'warning.dark',
+                                        px: 1,
+                                        py: 0.5,
+                                        borderRadius: 1,
+                                        fontWeight: 'bold'
+                                      }}>
+                                        PREMIUM
+                                      </Typography>
+                                    </Tooltip>
+                                  )}
+                                </Box>
+                              </TableCell>
+                              
+                              <TableCell align="right">
+                                {/* Button zum Erstellen von Stecklingen */}
+                                <IconButton 
+                                  size="small" 
+                                  sx={{ 
+                                    color: 'white',
+                                    backgroundColor: 'primary.main',
+                                    '&:hover': {
+                                      backgroundColor: 'primary.dark'
+                                    },
+                                    width: '28px',
+                                    height: '28px',
+                                    mr: 1
+                                  }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onOpenCreateCuttingDialog(batch, plant);
+                                  }}
+                                >
+                                  <ContentCutIcon fontSize="small" />
+                                </IconButton>
+                                
+                                {/* Button zum Vernichten */}
+                                <IconButton 
+                                  size="small" 
+                                  sx={{ 
+                                    color: 'white',
+                                    backgroundColor: 'error.main',
+                                    '&:hover': {
+                                      backgroundColor: 'error.dark'
+                                    },
+                                    width: '28px',
+                                    height: '28px'
+                                  }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    togglePlantSelection(batch.id, plant.id);
+                                    onOpenDestroyDialog(batch);
+                                  }}
+                                >
+                                  <LocalFireDepartmentIcon fontSize="small" />
+                                </IconButton>
+                              </TableCell>
                             </TableRow>
                           ))}
                         </TableBody>

@@ -15,7 +15,7 @@ from .models import (
     MotherPlantBatch, PackagingBatch, PackagingUnit, ProcessingBatch, ProductDistribution,
     SeedPurchaseImage, MotherPlantBatchImage, CuttingBatchImage, BloomingCuttingBatchImage, 
     FloweringPlantBatchImage, HarvestBatchImage, DryingBatchImage, ProcessingBatchImage, 
-    LabTestingBatchImage, SeedPurchase, PackagingBatchImage
+    LabTestingBatchImage, SeedPurchase, PackagingBatchImage, MotherPlantRating,
 )
 from .serializers import (
     BloomingCuttingBatchSerializer, BloomingCuttingPlantSerializer, CuttingBatchSerializer,
@@ -26,7 +26,7 @@ from .serializers import (
     SeedPurchaseSerializer, SeedPurchaseImageSerializer, MotherPlantBatchImageSerializer,
     CuttingBatchImageSerializer, BloomingCuttingBatchImageSerializer, FloweringPlantBatchImageSerializer, 
     HarvestBatchImageSerializer, DryingBatchImageSerializer, ProcessingBatchImageSerializer, 
-    LabTestingBatchImageSerializer, PackagingBatchImageSerializer
+    LabTestingBatchImageSerializer, PackagingBatchImageSerializer, MotherPlantRatingSerializer,
 )
 
 class StandardResultsSetPagination(pagination.PageNumberPagination):
@@ -1188,6 +1188,38 @@ class MotherPlantViewSet(viewsets.ModelViewSet):
             "message": f"{quantity} Stecklinge wurden von Mutterpflanze {plant.batch_number} erstellt",
             "batch": CuttingBatchSerializer(cutting_batch).data
         })
+    
+    @action(detail=True, methods=['post'])
+    def toggle_premium(self, request, pk=None):
+        """Markiert/Entmarkiert eine Mutterpflanze als Premium"""
+        plant = self.get_object()
+        
+        plant.is_premium_mother = not plant.is_premium_mother
+        if plant.is_premium_mother:
+            plant.premium_marked_at = timezone.now()
+            plant.premium_marked_by = request.user
+        else:
+            plant.premium_marked_at = None
+            plant.premium_marked_by = None
+            
+        plant.save()
+        
+        serializer = MotherPlantSerializer(plant)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['get'])
+    def ratings(self, request, pk=None):
+        """Gibt alle Bewertungen für eine Mutterpflanze zurück"""
+        plant = self.get_object()
+        ratings = plant.ratings.all()
+        
+        page = self.paginate_queryset(ratings)
+        if page is not None:
+            serializer = MotherPlantRatingSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+            
+        serializer = MotherPlantRatingSerializer(ratings, many=True)
+        return Response(serializer.data)
 
 class BloomingCuttingBatchViewSet(viewsets.ModelViewSet):
     queryset = BloomingCuttingBatch.objects.all().order_by('-created_at')
@@ -4607,3 +4639,18 @@ class PackagingBatchImageViewSet(BaseProductImageViewSet):
             serializer.save(packaging_batch_id=batch_id)
 
 
+class MotherPlantRatingViewSet(viewsets.ModelViewSet):
+    queryset = MotherPlantRating.objects.all().order_by('-created_at')
+    serializer_class = MotherPlantRatingSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = StandardResultsSetPagination
+    
+    def get_queryset(self):
+        queryset = MotherPlantRating.objects.all().order_by('-created_at')
+        
+        # Filter nach Mutterpflanze
+        mother_plant_id = self.request.query_params.get('mother_plant_id')
+        if mother_plant_id:
+            queryset = queryset.filter(mother_plant_id=mother_plant_id)
+            
+        return queryset

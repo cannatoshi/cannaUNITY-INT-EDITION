@@ -5,8 +5,7 @@ from members.models import Member
 from rooms.models import Room
 from wawi.models import CannabisStrain
 from django.core.files.storage import default_storage
-from django.core.validators import FileExtensionValidator, ValidationError
-
+from django.core.validators import FileExtensionValidator, ValidationError, MinValueValidator, MaxValueValidator
 from PIL import Image
 
 class SeedPurchase(models.Model):
@@ -115,6 +114,42 @@ class MotherPlant(models.Model):
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    is_premium_mother = models.BooleanField(
+        default=False,
+        help_text="Markiert besonders erfolgreiche Mutterpflanzen"
+    )
+    premium_marked_at = models.DateTimeField(blank=True, null=True)
+    premium_marked_by = models.ForeignKey(
+        Member, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='marked_premium_mothers'
+    )
+    
+    # Properties für aggregierte Werte
+    @property
+    def average_rating(self):
+        """Durchschnittliche Gesamtbewertung"""
+        ratings = self.ratings.all()
+        if not ratings:
+            return None
+        return sum(r.overall_score for r in ratings) / len(ratings)
+    
+    @property
+    def total_cuttings_produced(self):
+        """Gesamtzahl produzierter Stecklinge"""
+        return sum(rating.cuttings_harvested for rating in self.ratings.all())
+    
+    @property
+    def last_rating(self):
+        """Letzte Bewertung"""
+        return self.ratings.first()  # Da ordering = ['-created_at']
+    
+    @property
+    def rating_count(self):
+        """Anzahl der Bewertungen"""
+        return self.ratings.count()
     
     def save(self, *args, **kwargs):
         # Generiere Batch-Nummer falls nicht vorhanden
@@ -131,6 +166,88 @@ class MotherPlant(models.Model):
             self.batch_number = f"mother-plant:{today.strftime('%d:%m:%Y')}:{count:04d}"
         
         super().save(*args, **kwargs)
+
+class MotherPlantRating(models.Model):
+    """Bewertungsmodell für Mutterpflanzen-Performance"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    mother_plant = models.ForeignKey(MotherPlant, related_name='ratings', on_delete=models.CASCADE)
+    
+    # Allgemeine Bewertung
+    overall_health = models.IntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(10)],
+        help_text="Allgemeine Pflanzengesundheit (1-10 Sterne)"
+    )
+    health_notes = models.TextField(blank=True, null=True)
+    
+    # Wuchscharakteristik
+    growth_structure = models.IntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(10)],
+        help_text="Wuchsstruktur und Verzweigung (1-10)"
+    )
+    growth_notes = models.TextField(blank=True, null=True)
+    
+    # Regeneration
+    regeneration_ability = models.IntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(10)],
+        help_text="Regenerationsfähigkeit nach Schnitt (1-10)"
+    )
+    regeneration_notes = models.TextField(blank=True, null=True)
+    
+    # Nachwachsgeschwindigkeit
+    REGROWTH_SPEED_CHOICES = [
+        ('very_fast', 'Sehr schnell (< 7 Tage)'),
+        ('fast', 'Schnell (7-14 Tage)'),
+        ('normal', 'Normal (14-21 Tage)'),
+        ('slow', 'Langsam (> 21 Tage)'),
+    ]
+    regrowth_speed = models.CharField(max_length=20, choices=REGROWTH_SPEED_CHOICES)
+    regrowth_speed_rating = models.IntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(10)]
+    )
+    
+    # Stecklingsertrag
+    cuttings_harvested = models.PositiveIntegerField(
+        help_text="Anzahl geernteter Stecklinge bei diesem Schnitt"
+    )
+    cutting_quality = models.IntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(10)],
+        help_text="Qualität der Stecklinge (1-10)"
+    )
+    rooting_success_rate = models.DecimalField(
+        max_digits=5, decimal_places=2,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="Bewurzelungs-Erfolgsquote in %",
+        null=True, blank=True
+    )
+    
+    # Tracking
+    rated_by = models.ForeignKey(Member, on_delete=models.SET_NULL, null=True, related_name='mother_plant_ratings')
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    # Verknüpfung zum Stecklingsschnitt (optional)
+    cutting_batch = models.ForeignKey(
+        'CuttingBatch', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='mother_rating',
+        help_text="Verknüpfung zum zugehörigen Stecklingsschnitt"
+    )
+    
+    class Meta:
+        ordering = ['-created_at']
+        
+    @property
+    def overall_score(self):
+        """Berechnet den Gesamt-Performance-Score"""
+        scores = [
+            self.overall_health,
+            self.growth_structure,
+            self.regeneration_ability,
+            self.regrowth_speed_rating,
+            self.cutting_quality
+        ]
+        return sum(scores) / len(scores)
 
 class FloweringPlantBatch(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

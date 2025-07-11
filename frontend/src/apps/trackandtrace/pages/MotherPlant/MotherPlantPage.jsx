@@ -100,6 +100,136 @@ export default function MotherPlantPage() {
     refreshData() // Daten neu laden
   }
 
+  // Neue Funktion zum automatischen Laden der Plant-Daten für alle sichtbaren Batches
+  const loadPlantsForVisibleBatches = async (batches) => {
+    // Lade Plant-Daten für alle Batches parallel
+    const loadPromises = batches.map(async (batch) => {
+      // Nur laden wenn noch nicht vorhanden
+      if (!batchPlants[batch.id]) {
+        try {
+          const res = await api.get(`/trackandtrace/motherbatches/${batch.id}/plants/?page=1&destroyed=false`);
+          
+          const formattedPlants = (res.data.results || []).map(plant => ({
+            ...plant,
+            notes: plant.notes || '-',
+            destroy_reason: plant.destroy_reason || '-',
+            destroyed_by: plant.destroyed_by ? {
+              ...plant.destroyed_by,
+              display_name: plant.destroyed_by.display_name || 
+                            `${plant.destroyed_by.first_name || ''} ${plant.destroyed_by.last_name || ''}`.trim() || '-'
+            } : null
+          }));
+          
+          return { batchId: batch.id, plants: formattedPlants };
+        } catch (error) {
+          console.error(`Fehler beim Laden der Pflanzen für Batch ${batch.id}:`, error);
+          return { batchId: batch.id, plants: [] };
+        }
+      }
+      return null;
+    });
+    
+    // Warte auf alle Requests
+    const results = await Promise.all(loadPromises);
+    
+    // Aktualisiere den State mit allen geladenen Daten auf einmal
+    setBatchPlants(prev => {
+      const newData = { ...prev };
+      results.forEach(result => {
+        if (result && result.plants) {
+          newData[result.batchId] = result.plants;
+        }
+      });
+      return newData;
+    });
+    
+    // Gib die geladenen Daten zurück für weitere Verarbeitung
+    return results.filter(r => r !== null);
+  };
+
+  // Neue Funktion zum Laden der Rating-Counts für alle sichtbaren Batches
+  const loadRatingCountsForBatches = async (batches, plantData) => {
+    // Erstelle eine Map für plant_id zu batch_id
+    const plantToBatchMap = {};
+    
+    // Verwende die übergebenen plantData oder hole aus State
+    if (plantData) {
+      plantData.forEach(({ batchId, plants }) => {
+        if (plants && plants.length > 0) {
+          plantToBatchMap[plants[0].id] = batchId;
+        }
+      });
+    } else {
+      // Fallback: Verwende batchPlants aus State
+      batches.forEach(batch => {
+        const plants = batchPlants[batch.id];
+        if (plants && plants.length > 0) {
+          plantToBatchMap[plants[0].id] = batch.id;
+        }
+      });
+    }
+    
+    // Wenn keine Plants geladen sind, können wir keine Counts laden
+    const plantIds = Object.keys(plantToBatchMap);
+    if (plantIds.length === 0) {
+      console.log('Keine Plant-IDs gefunden, überspringe Rating-Count-Laden');
+      return;
+    }
+    
+    console.log(`Lade Rating-Counts für ${plantIds.length} Pflanzen...`);
+    
+    // Lade Rating-Counts für alle Plants parallel
+    const countPromises = plantIds.map(async (plantId) => {
+      try {
+        const response = await api.get(`/trackandtrace/motherplant-ratings/?mother_plant_id=${plantId}`);
+        const ratings = response.data.results || [];
+        
+        // Berechne durchschnittliche Bewertung
+        let avgRating = null;
+        if (ratings.length > 0) {
+          avgRating = (ratings.reduce((sum, r) => {
+            const score = r.overall_score || (
+              (r.overall_health + r.growth_structure + r.regeneration_ability + 
+               r.regrowth_speed_rating + r.cutting_quality) / 5
+            );
+            return sum + score;
+          }, 0) / ratings.length).toFixed(1);
+        }
+        
+        return { 
+          plantId, 
+          batchId: plantToBatchMap[plantId], 
+          count: ratings.length,
+          avgRating: avgRating
+        };
+      } catch (error) {
+        console.error(`Fehler beim Laden der Ratings für Plant ${plantId}:`, error);
+        return { plantId, batchId: plantToBatchMap[plantId], count: 0, avgRating: null };
+      }
+    });
+    
+    // Warte auf alle Requests
+    const results = await Promise.all(countPromises);
+    
+    console.log('Rating-Counts geladen:', results);
+    
+    // Aktualisiere die Batch-Daten mit den Rating-Counts
+    setMotherBatches(prevBatches => {
+      return prevBatches.map(batch => {
+        const result = results.find(r => r.batchId === batch.id);
+        if (result) {
+          return {
+            ...batch,
+            rating_count: result.count,
+            // Falls die durchschnittliche Bewertung auch fehlt, setze sie hier
+            average_batch_rating: batch.average_batch_rating || result.avgRating
+          };
+        }
+        return batch;
+      });
+    });
+  };
+
   const loadMotherBatches = async (page = 1) => {
     setLoading(true)
     try {
@@ -124,6 +254,15 @@ export default function MotherPlantPage() {
       console.log('Geladene Mutterpflanzen-Batches:', res.data);
       
       setMotherBatches(res.data.results || [])
+      
+      // WICHTIG: Lade automatisch die Plant-Daten für alle Batches
+      if (tabValue === 0 && res.data.results && res.data.results.length > 0) {
+        // Nur im aktiven Tab und wenn Batches vorhanden
+        const plantData = await loadPlantsForVisibleBatches(res.data.results);
+        
+        // NEU: Lade auch die Rating-Counts nachdem die Plants geladen wurden
+        await loadRatingCountsForBatches(res.data.results, plantData);
+      }
       
       // Berechne die Gesamtanzahl der Seiten basierend auf der Gesamtanzahl der Einträge
       const total = res.data.count || 0

@@ -168,7 +168,7 @@ const MotherPlantTable = ({
   const getCombinedData = (batch) => {
     const plant = getFirstPlant(batch);
     
-    // WICHTIG: Die API liefert die Daten unter "average_batch_rating", nicht "mother_average_rating"!
+    // WICHTIG: Die Parent-Component fügt jetzt rating_count direkt in die Batch-Daten ein!
     
     // Für die durchschnittliche Bewertung - average_batch_rating ist das richtige Feld!
     const averageRating = batch.average_batch_rating || // Das ist das richtige Feld aus der API!
@@ -180,29 +180,21 @@ const MotherPlantTable = ({
                          plant?.average_rating || 
                          null;
     
-    // Für die Anzahl der Bewertungen - suche in allen möglichen Feldern
-    let ratingCount = 0;
+    // Für die Anzahl der Bewertungen - jetzt direkt aus batch verfügbar!
+    let ratingCount = batch.rating_count || 0; // Direkt aus den Batch-Daten!
     
-    // Suche nach allen Feldern die "rating" und "count" enthalten
-    Object.keys(batch).forEach(key => {
-      if (key.toLowerCase().includes('rating') && key.toLowerCase().includes('count')) {
-        const value = batch[key];
-        if (typeof value === 'number' && value > ratingCount) {
-          ratingCount = value;
-        }
-      }
-    });
-    
-    // Falls immer noch 0, prüfe andere Quellen
+    // Fallback: Falls rating_count noch nicht geladen wurde, versuche andere Felder
     if (ratingCount === 0) {
-      ratingCount = batch.average_batch_rating_count || 
-                   batch.mother_rating_count || 
-                   batch.rating_count || 
-                   batch.plant_rating_count ||
-                   batch.ratings_count ||
-                   batch.total_ratings ||
-                   plant?.rating_count || 
-                   0;
+      // Prüfe andere mögliche Felder
+      if (batch.average_batch_rating_count !== undefined) {
+        ratingCount = batch.average_batch_rating_count;
+      } else if (batch.ratings_count !== undefined) {
+        ratingCount = batch.ratings_count;
+      } else if (batch.total_ratings !== undefined) {
+        ratingCount = batch.total_ratings;
+      } else if (plant?.rating_count !== undefined) {
+        ratingCount = plant.rating_count;
+      }
     }
     
     // Für Premium-Status - premium_plants_count zeigt an, ob Premium vorhanden
@@ -215,12 +207,11 @@ const MotherPlantTable = ({
                      false;
     
     // Plant-ID - da es nur eine Pflanze pro Batch gibt, könnte die ID direkt im Batch sein
-    // Prüfe verschiedene mögliche Feldnamen
     const plantId = batch.plant_id || 
                    batch.mother_plant_id || 
                    batch.single_plant_id ||
                    batch.first_plant_id ||
-                   batch.plants?.[0]?.id || // Falls plants Array direkt mitgeliefert wird
+                   batch.plants?.[0]?.id || 
                    plant?.id || 
                    null;
     
@@ -246,19 +237,12 @@ const MotherPlantTable = ({
       console.log('MotherPlantTable Debug Info:');
       console.log('- Total batches:', data.length);
       console.log('- Batches with ratings:', data.filter(b => b.average_batch_rating).length);
-      console.log('- Loaded plants:', Object.keys(batchPlants).length);
-      
-      // Suche nach Plant-ID Feldern im ersten Batch
-      if (data[0]) {
-        const plantIdFields = Object.keys(data[0]).filter(key => 
-          key.toLowerCase().includes('plant') && 
-          (key.toLowerCase().includes('id') || key === 'plants')
-        );
-        console.log('- Potential plant ID fields in batch:', plantIdFields);
-        plantIdFields.forEach(field => {
-          console.log(`  - ${field}:`, data[0][field]);
-        });
-      }
+      console.log('- Batches with rating_count:', data.filter(b => b.rating_count > 0).length);
+      console.log('- Sample batch data:', data[0] ? {
+        batch_number: data[0].batch_number,
+        average_batch_rating: data[0].average_batch_rating,
+        rating_count: data[0].rating_count
+      } : 'No batches');
     }
     
     // Basis-Spalten für alle Tabs
@@ -311,32 +295,48 @@ const MotherPlantTable = ({
           align: 'center'
         },
         {
-          // Bewertungs-Spalte
-          content: plant ? (
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-              {plant.average_rating && (
-                <Typography variant="body2" sx={{ color: 'warning.main' }}>
-                  ⭐ {plant.average_rating}
-                </Typography>
-              )}
+          // Bewertungs-Spalte - WICHTIG: Hier verwenden wir combinedData statt plant!
+          content: (
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+              {/* Stern mit Bewertung */}
+              {combinedData.average_rating ? (
+                <>
+                  <Typography variant="body2" sx={{ color: 'warning.main', display: 'flex', alignItems: 'center' }}>
+                    ⭐ {Number(combinedData.average_rating).toFixed(1)}
+                  </Typography>
+                  
+                  {/* Badge für Anzahl der Bewertungen - nur anzeigen wenn > 0 */}
+                  {combinedData.rating_count > 0 && (
+                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                      ({combinedData.rating_count})
+                    </Typography>
+                  )}
+                </>
+              ) : null}
               
-              {plant.is_premium_mother && (
+              {/* Premium Badge - mit etwas Abstand */}
+              {combinedData.is_premium && (
                 <Tooltip title="Premium Mutterpflanze">
                   <Typography variant="caption" sx={{ 
                     backgroundColor: 'warning.light',
                     color: 'warning.dark',
-                    px: 1,
-                    py: 0.5,
+                    px: 0.5,
+                    py: 0.25,
                     borderRadius: 1,
-                    fontWeight: 'bold'
+                    fontWeight: 'bold',
+                    fontSize: '0.65rem',
+                    ml: combinedData.average_rating ? 0.5 : 0
                   }}>
                     PREMIUM
                   </Typography>
                 </Tooltip>
               )}
+              
+              {/* Fallback wenn keine Daten vorhanden */}
+              {!combinedData.average_rating && !combinedData.is_premium && (
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>-</Typography>
+              )}
             </Box>
-          ) : (
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>-</Typography>
           ),
           width: '10%',
           align: 'center'
@@ -382,7 +382,7 @@ const MotherPlantTable = ({
                     }
                   }}
                 >
-                  <Tooltip title="Pflanze bewerten">
+                  <Tooltip title={`Pflanze bewerten ${combinedData.rating_count > 0 ? `(${combinedData.rating_count} Bewertungen)` : ''}`}>
                     <IconButton 
                       size="small" 
                       sx={{ 
@@ -392,11 +392,10 @@ const MotherPlantTable = ({
                       onClick={(e) => {
                         e.stopPropagation();
                         
-                        // Prüfe ob wir eine Plant-ID direkt aus dem Batch extrahieren können
-                        const plantId = combinedData.plant_id || batch.id + '_plant';
+                        // Verwende die plant_id aus combinedData oder generiere eine temporäre
+                        const plantId = combinedData.plant_id || `${batch.id}_plant`;
                         
-                        // Da es nur noch eine Pflanze pro Batch gibt, können wir
-                        // ein minimales Plant-Objekt erstellen, falls nötig
+                        // Erstelle ein minimales Plant-Objekt mit allen verfügbaren Daten
                         const plantData = plant || {
                           id: plantId,
                           batch_id: batch.id,
@@ -404,17 +403,21 @@ const MotherPlantTable = ({
                           rating_count: combinedData.rating_count,
                           average_rating: combinedData.average_rating,
                           is_premium_mother: combinedData.is_premium,
-                          is_destroyed: false
+                          is_destroyed: false,
+                          // Füge weitere relevante Felder hinzu
+                          created_at: batch.created_at,
+                          notes: batch.notes
                         };
                         
-                        console.log('Opening rating dialog:', {
+                        console.log('Opening rating dialog with combined data:', {
                           batch_id: batch.id,
                           plant_id: plantData.id,
                           has_real_plant: !!plant,
-                          combined_plant_id: combinedData.plant_id
+                          rating_from_batch: combinedData.average_rating,
+                          rating_count: combinedData.rating_count
                         });
                         
-                        // Öffne den Dialog direkt mit den verfügbaren Daten
+                        // Öffne den Dialog mit den kombinierten Daten
                         onOpenRatingDialog(batch, plantData);
                       }}
                     >

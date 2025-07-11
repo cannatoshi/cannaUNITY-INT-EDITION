@@ -27,7 +27,9 @@ import {
   Paper,
   Grid,
   Card,
-  CardContent
+  CardContent,
+  IconButton,
+  Alert
 } from '@mui/material'
 import StarIcon from '@mui/icons-material/Star'
 import CreditCardIcon from '@mui/icons-material/CreditCard'
@@ -37,6 +39,9 @@ import HistoryIcon from '@mui/icons-material/History'
 import LocalHospitalIcon from '@mui/icons-material/LocalHospital'
 import ScienceIcon from '@mui/icons-material/Science'
 import NatureIcon from '@mui/icons-material/Nature'
+import RefreshIcon from '@mui/icons-material/Refresh'
+import VisibilityIcon from '@mui/icons-material/Visibility'
+import AddIcon from '@mui/icons-material/Add'
 import api from '@/utils/api'
 
 const RatingDialog = ({ 
@@ -71,6 +76,11 @@ const RatingDialog = ({
   // State für Historie
   const [ratingHistory, setRatingHistory] = useState([])
   const [loadingHistory, setLoadingHistory] = useState(false)
+  
+  // NEU: States für Historie-Ansicht
+  const [viewMode, setViewMode] = useState('new') // 'new' oder 'history'
+  const [selectedHistoryId, setSelectedHistoryId] = useState(null)
+  const [isReadOnly, setIsReadOnly] = useState(false)
 
   // Lade Bewertungs-Historie
   const loadRatingHistory = async () => {
@@ -87,21 +97,49 @@ const RatingDialog = ({
     }
   }
 
+  // NEU: Funktion zum Laden einer historischen Bewertung
+  const loadHistoricRating = (rating) => {
+    setOverallHealth(rating.overall_health || 5)
+    setGrowthStructure(rating.growth_structure || 5)
+    setRegenerationAbility(rating.regeneration_ability || 5)
+    setRegrowthSpeed(rating.regrowth_speed || 'normal')
+    setRegrowthSpeedRating(rating.regrowth_speed_rating || 5)
+    setCuttingsHarvested(rating.cuttings_harvested || 0)
+    setCuttingQuality(rating.cutting_quality || 5)
+    setRootingSuccessRate(rating.rooting_success_rate)
+    setHealthNotes(rating.health_notes || '')
+    setGrowthNotes(rating.growth_notes || '')
+    setRegenerationNotes(rating.regeneration_notes || '')
+    
+    setSelectedHistoryId(rating.id)
+    setViewMode('history')
+    setIsReadOnly(true)
+  }
+
+  // NEU: Funktion zum Zurücksetzen auf neue Bewertung
+  const resetToNewRating = () => {
+    setOverallHealth(5)
+    setGrowthStructure(5)
+    setRegenerationAbility(5)
+    setRegrowthSpeed('normal')
+    setRegrowthSpeedRating(5)
+    setCuttingsHarvested(0)
+    setCuttingQuality(5)
+    setRootingSuccessRate(null)
+    setHealthNotes('')
+    setGrowthNotes('')
+    setRegenerationNotes('')
+    
+    setSelectedHistoryId(null)
+    setViewMode('new')
+    setIsReadOnly(false)
+  }
+
   // Dialog zurücksetzen beim Öffnen
   useEffect(() => {
     if (open && plant) {
-      // States zurücksetzen
-      setOverallHealth(5)
-      setGrowthStructure(5)
-      setRegenerationAbility(5)
-      setRegrowthSpeed('normal')
-      setRegrowthSpeedRating(5)
-      setCuttingsHarvested(0)
-      setCuttingQuality(5)
-      setRootingSuccessRate(null)
-      setHealthNotes('')
-      setGrowthNotes('')
-      setRegenerationNotes('')
+      // Auf neue Bewertung zurücksetzen
+      resetToNewRating()
       
       // RFID-States zurücksetzen
       setScanMode(false)
@@ -406,12 +444,40 @@ const RatingDialog = ({
         </Box>
       </Box>
 
+      {/* NEU: Status-Bar für Ansichtsmodus */}
+      {viewMode === 'history' && (
+        <Alert 
+          severity="info" 
+          sx={{ 
+            borderRadius: 0,
+            '& .MuiAlert-icon': { fontSize: 28 }
+          }}
+          action={
+            <Button 
+              color="inherit" 
+              size="small"
+              startIcon={<AddIcon />}
+              onClick={resetToNewRating}
+              sx={{ fontWeight: 'bold' }}
+            >
+              Neue Bewertung erstellen
+            </Button>
+          }
+        >
+          <Typography variant="body1">
+            <strong>Historische Bewertung vom {selectedHistoryId && ratingHistory.find(r => r.id === selectedHistoryId) ? 
+              new Date(ratingHistory.find(r => r.id === selectedHistoryId).created_at).toLocaleDateString('de-DE') : 
+              'N/A'}</strong> - Nur Ansicht
+          </Typography>
+        </Alert>
+      )}
+
       {/* Content */}
       <Box sx={{ 
         p: 3, 
         display: 'flex',
         gap: 3,
-        height: 'calc(100vh - 70px - 80px)', // Header + Footer
+        height: viewMode === 'history' ? 'calc(100vh - 70px - 80px - 52px)' : 'calc(100vh - 70px - 80px)', // Alert height berücksichtigen
       }}>
         {/* Hauptbereich - 3 Spalten */}
         <Box sx={{ 
@@ -421,7 +487,7 @@ const RatingDialog = ({
           gap: 3
         }}>
           {/* Spalte 1: Gesundheitsbewertung */}
-          <Card sx={{ bgcolor: 'white', boxShadow: 2 }}>
+          <Card sx={{ bgcolor: 'white', boxShadow: 2, opacity: isReadOnly ? 0.95 : 1 }}>
             <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                 <ScienceIcon sx={{ mr: 1.5, fontSize: 28, color: '#2e7d32' }} />
@@ -439,9 +505,10 @@ const RatingDialog = ({
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
                     <Rating
                       value={overallHealth}
-                      onChange={(e, value) => setOverallHealth(value)}
+                      onChange={(e, value) => !isReadOnly && setOverallHealth(value)}
                       max={10}
                       size="large"
+                      readOnly={isReadOnly}
                     />
                     <Typography variant="h6" sx={{ minWidth: '50px' }}>{overallHealth}/10</Typography>
                   </Box>
@@ -450,10 +517,11 @@ const RatingDialog = ({
                     size="small"
                     label="Klinische Notizen"
                     value={healthNotes}
-                    onChange={(e) => setHealthNotes(e.target.value)}
+                    onChange={(e) => !isReadOnly && setHealthNotes(e.target.value)}
                     multiline
                     rows={6}
                     variant="outlined"
+                    InputProps={{ readOnly: isReadOnly }}
                   />
                 </Box>
 
@@ -465,9 +533,10 @@ const RatingDialog = ({
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
                     <Rating
                       value={growthStructure}
-                      onChange={(e, value) => setGrowthStructure(value)}
+                      onChange={(e, value) => !isReadOnly && setGrowthStructure(value)}
                       max={10}
                       size="large"
+                      readOnly={isReadOnly}
                     />
                     <Typography variant="h6" sx={{ minWidth: '50px' }}>{growthStructure}/10</Typography>
                   </Box>
@@ -476,10 +545,11 @@ const RatingDialog = ({
                     size="small"
                     label="Strukturelle Beobachtungen"
                     value={growthNotes}
-                    onChange={(e) => setGrowthNotes(e.target.value)}
+                    onChange={(e) => !isReadOnly && setGrowthNotes(e.target.value)}
                     multiline
                     rows={6}
                     variant="outlined"
+                    InputProps={{ readOnly: isReadOnly }}
                   />
                 </Box>
 
@@ -491,9 +561,10 @@ const RatingDialog = ({
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
                     <Rating
                       value={regenerationAbility}
-                      onChange={(e, value) => setRegenerationAbility(value)}
+                      onChange={(e, value) => !isReadOnly && setRegenerationAbility(value)}
                       max={10}
                       size="large"
+                      readOnly={isReadOnly}
                     />
                     <Typography variant="h6" sx={{ minWidth: '50px' }}>{regenerationAbility}/10</Typography>
                   </Box>
@@ -502,10 +573,11 @@ const RatingDialog = ({
                     size="small"
                     label="Regenerationsprotokoll"
                     value={regenerationNotes}
-                    onChange={(e) => setRegenerationNotes(e.target.value)}
+                    onChange={(e) => !isReadOnly && setRegenerationNotes(e.target.value)}
                     multiline
                     rows={6}
                     variant="outlined"
+                    InputProps={{ readOnly: isReadOnly }}
                   />
                 </Box>
               </Box>
@@ -513,7 +585,7 @@ const RatingDialog = ({
           </Card>
 
           {/* Spalte 2: Produktionsdaten */}
-          <Card sx={{ bgcolor: 'white', boxShadow: 2 }}>
+          <Card sx={{ bgcolor: 'white', boxShadow: 2, opacity: isReadOnly ? 0.95 : 1 }}>
             <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                 <NatureIcon sx={{ mr: 1.5, fontSize: 28, color: '#388e3c' }} />
@@ -525,11 +597,11 @@ const RatingDialog = ({
               <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3 }}>
                 {/* Nachwachsgeschwindigkeit */}
                 <Box>
-                  <FormControl fullWidth>
+                  <FormControl fullWidth disabled={isReadOnly}>
                     <InputLabel>Nachwachsgeschwindigkeit</InputLabel>
                     <Select
                       value={regrowthSpeed}
-                      onChange={(e) => setRegrowthSpeed(e.target.value)}
+                      onChange={(e) => !isReadOnly && setRegrowthSpeed(e.target.value)}
                       label="Nachwachsgeschwindigkeit"
                     >
                       <MenuItem value="very_fast">Sehr schnell (&lt; 7 Tage)</MenuItem>
@@ -543,9 +615,10 @@ const RatingDialog = ({
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                       <Rating
                         value={regrowthSpeedRating}
-                        onChange={(e, value) => setRegrowthSpeedRating(value)}
+                        onChange={(e, value) => !isReadOnly && setRegrowthSpeedRating(value)}
                         max={10}
                         size="medium"
+                        readOnly={isReadOnly}
                       />
                       <Typography variant="body1">{regrowthSpeedRating}/10</Typography>
                     </Box>
@@ -566,8 +639,8 @@ const RatingDialog = ({
                         label="Anzahl geernteter Stecklinge"
                         type="number"
                         value={cuttingsHarvested}
-                        onChange={(e) => setCuttingsHarvested(parseInt(e.target.value) || 0)}
-                        inputProps={{ min: 0 }}
+                        onChange={(e) => !isReadOnly && setCuttingsHarvested(parseInt(e.target.value) || 0)}
+                        inputProps={{ min: 0, readOnly: isReadOnly }}
                       />
                     </Grid>
                     <Grid item xs={12}>
@@ -576,8 +649,8 @@ const RatingDialog = ({
                         label="Bewurzelungs-Erfolgsquote (%)"
                         type="number"
                         value={rootingSuccessRate || ''}
-                        onChange={(e) => setRootingSuccessRate(e.target.value ? parseFloat(e.target.value) : null)}
-                        inputProps={{ min: 0, max: 100, step: 0.1 }}
+                        onChange={(e) => !isReadOnly && setRootingSuccessRate(e.target.value ? parseFloat(e.target.value) : null)}
+                        inputProps={{ min: 0, max: 100, step: 0.1, readOnly: isReadOnly }}
                         helperText="Optional - Prozentuale Erfolgsquote"
                       />
                     </Grid>
@@ -594,9 +667,10 @@ const RatingDialog = ({
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Rating
                       value={cuttingQuality}
-                      onChange={(e, value) => setCuttingQuality(value)}
+                      onChange={(e, value) => !isReadOnly && setCuttingQuality(value)}
                       max={10}
                       size="large"
+                      readOnly={isReadOnly}
                     />
                     <Typography variant="h6">{cuttingQuality}/10</Typography>
                   </Box>
@@ -606,12 +680,12 @@ const RatingDialog = ({
                 <Box sx={{ 
                   mt: 'auto',
                   p: 3, 
-                  bgcolor: '#ecf5f0ff',
+                  bgcolor: isReadOnly ? '#e8f5e9' : '#ecf5f0ff',
                   borderRadius: 2,
                   textAlign: 'center'
                 }}>
                   <Typography variant="h6" sx={{ color: '#2e7d32', mb: 1 }}>
-                    Gesamtbewertung
+                    {isReadOnly ? 'Historische Gesamtbewertung' : 'Gesamtbewertung'}
                   </Typography>
                   <Typography variant="h2" sx={{ fontWeight: 'bold', color: '#2e7d32' }}>
                     {calculateOverallScore()}
@@ -671,59 +745,182 @@ const RatingDialog = ({
                       borderRadius: '4px',
                     },
                   }}>
-                    {ratingHistory.map((rating, index) => (
-                      <Box key={rating.id}>
-                        <ListItem sx={{ px: 1 }}>
-                          <ListItemAvatar>
-                            <Avatar sx={{ bgcolor: '#2e7d32' }}>
-                              <Typography variant="body2">{rating.overall_score}</Typography>
-                            </Avatar>
-                          </ListItemAvatar>
-                          <ListItemText
-                            primary={
+                    {ratingHistory.map((rating, index) => {
+                      // Berechne die Gesamtbewertung für historische Einträge
+                      const historicalScore = rating.overall_score || (
+                        (rating.overall_health + rating.growth_structure + rating.regeneration_ability + 
+                         rating.regrowth_speed_rating + rating.cutting_quality) / 5
+                      ).toFixed(1)
+                      
+                      return (
+                        <Box key={rating.id}>
+                          <Paper
+                            elevation={0}
+                            sx={{ 
+                              border: selectedHistoryId === rating.id ? '2px solid #2e7d32' : '1px solid #e0e0e0',
+                              borderRadius: 2,
+                              mb: 2,
+                              overflow: 'hidden',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                              '&:hover': {
+                                boxShadow: 2,
+                                borderColor: selectedHistoryId === rating.id ? '#2e7d32' : '#bdbdbd'
+                              }
+                            }}
+                            onClick={() => loadHistoricRating(rating)}
+                          >
+                            {/* Header mit Datum und Bewerter */}
+                            <Box sx={{ 
+                              bgcolor: '#f5f5f5',
+                              px: 2,
+                              py: 1.5,
+                              borderBottom: '1px solid #e0e0e0',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between'
+                            }}>
                               <Box>
-                                <Typography variant="body2">
-                                  {new Date(rating.created_at).toLocaleDateString('de-DE')} • {new Date(rating.created_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+                                <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                                  {new Date(rating.created_at).toLocaleDateString('de-DE', { 
+                                    day: '2-digit', 
+                                    month: 'long', 
+                                    year: 'numeric' 
+                                  })} • {new Date(rating.created_at).toLocaleTimeString('de-DE', { 
+                                    hour: '2-digit', 
+                                    minute: '2-digit' 
+                                  })} Uhr
                                 </Typography>
-                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                  {rating.rated_by?.display_name || 'Unbekannt'}
+                                <Typography variant="body2" color="text.secondary">
+                                  Bewertet von: {rating.rated_by?.display_name || 'Unbekannt'}
                                 </Typography>
                               </Box>
-                            }
-                            secondary={
-                              <Box sx={{ mt: 1 }}>
-                                <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                                  <Chip 
-                                    label={`${rating.cuttings_harvested} Stecklinge`}
-                                    size="small"
-                                    variant="outlined"
-                                  />
-                                  <Chip 
-                                    label={formatRegrowthSpeed(rating.regrowth_speed)}
-                                    size="small"
-                                    variant="outlined"
-                                  />
-                                  {rating.rooting_success_rate && (
-                                    <Chip 
-                                      label={`${rating.rooting_success_rate}% Erfolg`}
-                                      size="small"
-                                      variant="outlined"
-                                      color="success"
-                                    />
-                                  )}
-                                </Box>
-                                {rating.health_notes && (
-                                  <Typography variant="caption" sx={{ display: 'block', mt: 1, fontStyle: 'italic' }}>
-                                    {rating.health_notes}
-                                  </Typography>
-                                )}
-                              </Box>
-                            }
-                          />
-                        </ListItem>
-                        {index < ratingHistory.length - 1 && <Divider component="li" />}
-                      </Box>
-                    ))}
+                              <VisibilityIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
+                            </Box>
+                            
+                            {/* Hauptinhalt */}
+                            <Box sx={{ p: 2 }}>
+                              <Grid container spacing={2} alignItems="stretch">
+                                {/* Linke Seite: Gesamtbewertung */}
+                                <Grid item xs={3}>
+                                  <Box sx={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    height: '100%',
+                                    borderRight: '1px solid #e0e0e0',
+                                    pr: 2
+                                  }}>
+                                    <Box sx={{
+                                      bgcolor: historicalScore >= 8 ? '#2e7d32' : 
+                                              historicalScore >= 6 ? '#ff9800' : '#f44336',
+                                      color: 'white',
+                                      borderRadius: 2,
+                                      px: 3,
+                                      py: 2,
+                                      textAlign: 'center',
+                                      minWidth: '100px'
+                                    }}>
+                                      <Typography variant="h3" sx={{ fontWeight: 'bold', lineHeight: 1 }}>
+                                        {historicalScore}
+                                      </Typography>
+                                      <Typography variant="caption" sx={{ fontSize: '0.75rem', letterSpacing: 1 }}>
+                                        RATING
+                                      </Typography>
+                                    </Box>
+                                  </Box>
+                                </Grid>
+                                
+                                {/* Mitte: Produktionsdaten */}
+                                <Grid item xs={4}>
+                                  <Box sx={{ 
+                                    height: '100%',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    justifyContent: 'center',
+                                    borderRight: '1px solid #e0e0e0',
+                                    pr: 2
+                                  }}>
+                                    <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>
+                                      Produktionsdaten
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                      <Chip 
+                                        label={`${rating.cuttings_harvested} Stecklinge`}
+                                        size="small"
+                                        icon={<NatureIcon sx={{ fontSize: 16 }} />}
+                                        sx={{ alignSelf: 'flex-start' }}
+                                      />
+                                      <Chip 
+                                        label={formatRegrowthSpeed(rating.regrowth_speed)}
+                                        size="small"
+                                        sx={{ alignSelf: 'flex-start' }}
+                                      />
+                                      {rating.rooting_success_rate && (
+                                        <Chip 
+                                          label={`${rating.rooting_success_rate}% Erfolg`}
+                                          size="small"
+                                          color="success"
+                                          variant="filled"
+                                          sx={{ alignSelf: 'flex-start' }}
+                                        />
+                                      )}
+                                    </Box>
+                                  </Box>
+                                </Grid>
+                                
+                                {/* Rechte Seite: Einzelbewertungen */}
+                                <Grid item xs={5}>
+                                  <Box sx={{ 
+                                    height: '100%',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    justifyContent: 'center'
+                                  }}>
+                                    <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>
+                                      Detailbewertungen
+                                    </Typography>
+                                    <Grid container spacing={2}>
+                                      <Grid item xs={4}>
+                                        <Box sx={{ textAlign: 'center' }}>
+                                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                                            Gesundheit
+                                          </Typography>
+                                          <Typography variant="h6" sx={{ fontWeight: 600, lineHeight: 1.2 }}>
+                                            {rating.overall_health}/10
+                                          </Typography>
+                                        </Box>
+                                      </Grid>
+                                      <Grid item xs={4}>
+                                        <Box sx={{ textAlign: 'center' }}>
+                                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                                            Struktur
+                                          </Typography>
+                                          <Typography variant="h6" sx={{ fontWeight: 600, lineHeight: 1.2 }}>
+                                            {rating.growth_structure}/10
+                                          </Typography>
+                                        </Box>
+                                      </Grid>
+                                      <Grid item xs={4}>
+                                        <Box sx={{ textAlign: 'center' }}>
+                                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                                            Regeneration
+                                          </Typography>
+                                          <Typography variant="h6" sx={{ fontWeight: 600, lineHeight: 1.2 }}>
+                                            {rating.regeneration_ability}/10
+                                          </Typography>
+                                        </Box>
+                                      </Grid>
+                                    </Grid>
+                                  </Box>
+                                </Grid>
+                              </Grid>
+                            </Box>
+                          </Paper>
+                        </Box>
+                      )
+                    })}
                   </List>
                 )}
               </Box>
@@ -755,23 +952,42 @@ const RatingDialog = ({
           cannaUNITY Cannabis Qualitätssicherung
         </Typography>
 
-        <Button 
-          onClick={startRfidScan}
-          variant="contained"
-          size="large"
-          disabled={loading || cuttingsHarvested === 0}
-          startIcon={loading ? <CircularProgress size={20} /> : <CreditCardIcon />}
-          sx={{ 
-            minWidth: '350px', 
-            height: '50px',
-            bgcolor: '#2b772fff',
-            '&:hover': {
-              bgcolor: '#165719ff'
-            }
-          }}
-        >
-          Mit RFID autorisieren & speichern
-        </Button>
+        {isReadOnly ? (
+          <Button 
+            onClick={resetToNewRating}
+            variant="contained"
+            size="large"
+            startIcon={<AddIcon />}
+            sx={{ 
+              minWidth: '350px', 
+              height: '50px',
+              bgcolor: '#2b772fff',
+              '&:hover': {
+                bgcolor: '#165719ff'
+              }
+            }}
+          >
+            Neue Bewertung erstellen
+          </Button>
+        ) : (
+          <Button 
+            onClick={startRfidScan}
+            variant="contained"
+            size="large"
+            disabled={loading || cuttingsHarvested === 0}
+            startIcon={loading ? <CircularProgress size={20} /> : <CreditCardIcon />}
+            sx={{ 
+              minWidth: '350px', 
+              height: '50px',
+              bgcolor: '#2b772fff',
+              '&:hover': {
+                bgcolor: '#165719ff'
+              }
+            }}
+          >
+            Mit RFID autorisieren & speichern
+          </Button>
+        )}
       </Box>
     </Dialog>
   )

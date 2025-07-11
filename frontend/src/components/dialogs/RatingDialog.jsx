@@ -25,13 +25,18 @@ import {
   Avatar,
   Chip,
   Paper,
-  Grid
+  Grid,
+  Card,
+  CardContent
 } from '@mui/material'
 import StarIcon from '@mui/icons-material/Star'
 import CreditCardIcon from '@mui/icons-material/CreditCard'
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
 import PersonIcon from '@mui/icons-material/Person'
 import HistoryIcon from '@mui/icons-material/History'
+import LocalHospitalIcon from '@mui/icons-material/LocalHospital'
+import ScienceIcon from '@mui/icons-material/Science'
+import NatureIcon from '@mui/icons-material/Nature'
 import api from '@/utils/api'
 
 const RatingDialog = ({ 
@@ -292,12 +297,13 @@ const RatingDialog = ({
       PaperProps={{
         sx: { 
           position: 'fixed',
-          overflow: scanMode ? 'hidden' : 'hidden',
-          width: '100vw',
-          height: '100vh',
+          overflow: 'hidden',
+          width: '1920px',
+          height: '1080px',
           maxWidth: '1920px',
           maxHeight: '1080px',
-          margin: 'auto'
+          margin: 'auto',
+          bgcolor: '#f8f9fa'
         }
       }}
     >
@@ -309,7 +315,7 @@ const RatingDialog = ({
           left: 0,
           width: '100%',
           height: '100%',
-          bgcolor: 'primary.light',
+          bgcolor: '#2e7d32',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
@@ -342,16 +348,16 @@ const RatingDialog = ({
                   <CheckCircleOutlineIcon sx={{ fontSize: 120, color: 'white', mb: 2 }} />
                 </Zoom>
                 
-                <Typography variant="h3" color="white" fontWeight="bold" gutterBottom>
-                  Bewertung gespeichert!
+                <Typography variant="h3" color="white" fontWeight="500" gutterBottom>
+                  Bewertung erfolgreich gespeichert
                 </Typography>
                 
                 <Typography variant="h5" color="white" sx={{ mt: 2 }}>
-                  Mutterpflanze {plant.batch_number} wurde mit ⭐ {calculateOverallScore()} bewertet
+                  Mutterpflanze {plant.batch_number} | Bewertung: {calculateOverallScore()}
                 </Typography>
                 
-                <Typography variant="h4" color="white" fontWeight="bold" sx={{ mt: 2 }}>
-                  Bewertet von: {scannedMemberName}
+                <Typography variant="h5" color="white" sx={{ mt: 2 }}>
+                  Bewerter: {scannedMemberName}
                 </Typography>
               </Box>
             </Fade>
@@ -359,12 +365,12 @@ const RatingDialog = ({
             <>
               <CreditCardIcon sx={{ fontSize: 120, color: 'white', mb: 2 }} />
               
-              <Typography variant="h3" color="white" fontWeight="bold" gutterBottom>
-                Bitte Ausweis jetzt scannen
+              <Typography variant="h3" color="white" fontWeight="300" gutterBottom>
+                RFID-Authentifizierung erforderlich
               </Typography>
               
-              <Typography variant="h5" color="white" gutterBottom>
-                um die Bewertung zu speichern
+              <Typography variant="h5" color="white" fontWeight="300" gutterBottom>
+                Bitte Mitarbeiterausweis scannen
               </Typography>
               
               {loading && (
@@ -379,151 +385,152 @@ const RatingDialog = ({
         </Box>
       )}
 
-      <DialogTitle sx={{ 
+      {/* Header */}
+      <Box sx={{ 
         display: 'flex', 
         alignItems: 'center',
-        bgcolor: 'primary.main',
+        bgcolor: '#2e7d32',
         color: 'white',
-        py: 1.5,
         px: 3,
-        height: '60px'
+        height: '70px',
+        borderBottom: '2px solid #2e7d32'
       }}>
-        <StarIcon sx={{ color: 'warning.main', mr: 2, fontSize: 36 }} />
-        <Typography variant="h4">
-          Mutterpflanze bewerten: {plant.batch_number}
+        <LocalHospitalIcon sx={{ mr: 2, fontSize: 32 }} />
+        <Typography variant="h4" sx={{ fontWeight: 300 }}>
+          Mutterpflanzenbewertung
         </Typography>
-      </DialogTitle>
+        <Box sx={{ ml: 'auto', display: 'flex', gap: 3 }}>
+          <Typography variant="h6">ID: {plant.batch_number}</Typography>
+          <Typography variant="h6">Genetik: {batch?.seed_strain || 'N/A'}</Typography>
+          <Typography variant="h6">Datum: {new Date().toLocaleDateString('de-DE')}</Typography>
+        </Box>
+      </Box>
 
-      <DialogContent sx={{ 
-        p: 2, 
+      {/* Content */}
+      <Box sx={{ 
+        p: 3, 
         display: 'flex',
-        gap: 2,
-        height: 'calc(100vh - 60px - 70px)', // Title + Actions
-        bgcolor: '#f5f5f5'
+        gap: 3,
+        height: 'calc(100vh - 70px - 80px)', // Header + Footer
       }}>
-        {/* Linke Spalte: Bewertungsformular (75%) */}
+        {/* Hauptbereich - 3 Spalten */}
         <Box sx={{ 
-          flex: '0 0 75%',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 2
+          flex: 1,
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr 1fr',
+          gap: 3
         }}>
-          {/* Info-Header */}
-          <Paper sx={{ 
-            p: 2, 
-            bgcolor: '#e3f2fd',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center'
-          }}>
-            <Box sx={{ display: 'flex', gap: 3 }}>
-              <Typography variant="h6"><strong>Pflanze:</strong> {plant.batch_number}</Typography>
-              <Typography variant="h6"><strong>Genetik:</strong> {batch?.seed_strain || 'Unbekannt'}</Typography>
-            </Box>
-            <Box sx={{ display: 'flex', gap: 3 }}>
-              <Typography variant="h6"><strong>Erstellt:</strong> {new Date(plant.created_at).toLocaleDateString('de-DE')}</Typography>
-              <Typography variant="h6"><strong>Bisherige Bewertungen:</strong> {ratingHistory.length}</Typography>
-            </Box>
-          </Paper>
-
-          {/* Obere Zeile: Drei Hauptbewertungen */}
-          <Box sx={{ display: 'flex', gap: 2, height: '45%' }}>
-            {/* Gesundheit */}
-            <Paper sx={{ flex: 1, p: 2.5, bgcolor: 'white', display: 'flex', flexDirection: 'column' }}>
-              <Typography variant="h5" gutterBottom sx={{ color: 'primary.main', fontWeight: 'bold' }}>
-                Allgemeine Pflanzengesundheit
-              </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 2, mb: 2 }}>
-                <Rating
-                  value={overallHealth}
-                  onChange={(e, value) => setOverallHealth(value)}
-                  max={10}
-                  size="large"
-                  sx={{ fontSize: '2.5rem' }}
-                />
-                <Typography variant="h3">{overallHealth}/10</Typography>
+          {/* Spalte 1: Gesundheitsbewertung */}
+          <Card sx={{ bgcolor: 'white', boxShadow: 2 }}>
+            <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                <ScienceIcon sx={{ mr: 1.5, fontSize: 28, color: '#2e7d32' }} />
+                <Typography variant="h5" sx={{ fontWeight: 500 }}>
+                  Pflanzengesundheit
+                </Typography>
               </Box>
-              <TextField
-                fullWidth
-                label="Notizen zur Gesundheit"
-                value={healthNotes}
-                onChange={(e) => setHealthNotes(e.target.value)}
-                multiline
-                rows={3}
-                variant="outlined"
-                sx={{ mt: 'auto' }}
-              />
-            </Paper>
+              
+              <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                {/* Allgemeine Gesundheit */}
+                <Box>
+                  <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 500 }}>
+                    Allgemeine Pflanzengesundheit
+                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                    <Rating
+                      value={overallHealth}
+                      onChange={(e, value) => setOverallHealth(value)}
+                      max={10}
+                      size="large"
+                    />
+                    <Typography variant="h6" sx={{ minWidth: '50px' }}>{overallHealth}/10</Typography>
+                  </Box>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Klinische Notizen"
+                    value={healthNotes}
+                    onChange={(e) => setHealthNotes(e.target.value)}
+                    multiline
+                    rows={6}
+                    variant="outlined"
+                  />
+                </Box>
 
-            {/* Wuchs */}
-            <Paper sx={{ flex: 1, p: 2.5, bgcolor: 'white', display: 'flex', flexDirection: 'column' }}>
-              <Typography variant="h5" gutterBottom sx={{ color: 'primary.main', fontWeight: 'bold' }}>
-                Wuchsstruktur und Verzweigung
-              </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 2, mb: 2 }}>
-                <Rating
-                  value={growthStructure}
-                  onChange={(e, value) => setGrowthStructure(value)}
-                  max={10}
-                  size="large"
-                  sx={{ fontSize: '2.5rem' }}
-                />
-                <Typography variant="h3">{growthStructure}/10</Typography>
+                {/* Wuchsstruktur */}
+                <Box>
+                  <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 500 }}>
+                    Wuchsstruktur und Verzweigung
+                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                    <Rating
+                      value={growthStructure}
+                      onChange={(e, value) => setGrowthStructure(value)}
+                      max={10}
+                      size="large"
+                    />
+                    <Typography variant="h6" sx={{ minWidth: '50px' }}>{growthStructure}/10</Typography>
+                  </Box>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Strukturelle Beobachtungen"
+                    value={growthNotes}
+                    onChange={(e) => setGrowthNotes(e.target.value)}
+                    multiline
+                    rows={6}
+                    variant="outlined"
+                  />
+                </Box>
+
+                {/* Regeneration */}
+                <Box>
+                  <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 500 }}>
+                    Regenerationsfähigkeit nach Schnitt
+                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                    <Rating
+                      value={regenerationAbility}
+                      onChange={(e, value) => setRegenerationAbility(value)}
+                      max={10}
+                      size="large"
+                    />
+                    <Typography variant="h6" sx={{ minWidth: '50px' }}>{regenerationAbility}/10</Typography>
+                  </Box>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Regenerationsprotokoll"
+                    value={regenerationNotes}
+                    onChange={(e) => setRegenerationNotes(e.target.value)}
+                    multiline
+                    rows={6}
+                    variant="outlined"
+                  />
+                </Box>
               </Box>
-              <TextField
-                fullWidth
-                label="Notizen zum Wuchs"
-                value={growthNotes}
-                onChange={(e) => setGrowthNotes(e.target.value)}
-                multiline
-                rows={3}
-                variant="outlined"
-                sx={{ mt: 'auto' }}
-              />
-            </Paper>
+            </CardContent>
+          </Card>
 
-            {/* Regeneration */}
-            <Paper sx={{ flex: 1, p: 2.5, bgcolor: 'white', display: 'flex', flexDirection: 'column' }}>
-              <Typography variant="h5" gutterBottom sx={{ color: 'primary.main', fontWeight: 'bold' }}>
-                Regenerationsfähigkeit nach Schnitt
-              </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 2, mb: 2 }}>
-                <Rating
-                  value={regenerationAbility}
-                  onChange={(e, value) => setRegenerationAbility(value)}
-                  max={10}
-                  size="large"
-                  sx={{ fontSize: '2.5rem' }}
-                />
-                <Typography variant="h3">{regenerationAbility}/10</Typography>
+          {/* Spalte 2: Produktionsdaten */}
+          <Card sx={{ bgcolor: 'white', boxShadow: 2 }}>
+            <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                <NatureIcon sx={{ mr: 1.5, fontSize: 28, color: '#388e3c' }} />
+                <Typography variant="h5" sx={{ fontWeight: 500 }}>
+                  Produktionsdaten
+                </Typography>
               </Box>
-              <TextField
-                fullWidth
-                label="Notizen zur Regeneration"
-                value={regenerationNotes}
-                onChange={(e) => setRegenerationNotes(e.target.value)}
-                multiline
-                rows={3}
-                variant="outlined"
-                sx={{ mt: 'auto' }}
-              />
-            </Paper>
-          </Box>
 
-          {/* Untere Zeile: Details & Score */}
-          <Box sx={{ display: 'flex', gap: 2, height: '45%' }}>
-            {/* Details Box */}
-            <Paper sx={{ flex: '0 0 70%', p: 3, bgcolor: 'white' }}>
-              <Grid container spacing={3} sx={{ height: '100%' }} alignItems="center">
+              <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3 }}>
                 {/* Nachwachsgeschwindigkeit */}
-                <Grid item xs={6}>
+                <Box>
                   <FormControl fullWidth>
                     <InputLabel>Nachwachsgeschwindigkeit</InputLabel>
                     <Select
                       value={regrowthSpeed}
                       onChange={(e) => setRegrowthSpeed(e.target.value)}
                       label="Nachwachsgeschwindigkeit"
-                      sx={{ height: '60px', fontSize: '1.1rem' }}
                     >
                       <MenuItem value="very_fast">Sehr schnell (&lt; 7 Tage)</MenuItem>
                       <MenuItem value="fast">Schnell (7-14 Tage)</MenuItem>
@@ -531,223 +538,241 @@ const RatingDialog = ({
                       <MenuItem value="slow">Langsam (&gt; 21 Tage)</MenuItem>
                     </Select>
                   </FormControl>
-                </Grid>
-
-                <Grid item xs={6}>
-                  <Typography variant="h6" gutterBottom>Bewertung Nachwachsgeschwindigkeit</Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Rating
-                      value={regrowthSpeedRating}
-                      onChange={(e, value) => setRegrowthSpeedRating(value)}
-                      max={10}
-                      size="large"
-                      sx={{ fontSize: '1.8rem' }}
-                    />
-                    <Typography variant="h4">{regrowthSpeedRating}/10</Typography>
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="subtitle2" sx={{ mb: 1 }}>Bewertung</Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Rating
+                        value={regrowthSpeedRating}
+                        onChange={(e, value) => setRegrowthSpeedRating(value)}
+                        max={10}
+                        size="medium"
+                      />
+                      <Typography variant="body1">{regrowthSpeedRating}/10</Typography>
+                    </Box>
                   </Box>
-                </Grid>
+                </Box>
 
-                {/* Stecklinge Daten */}
-                <Grid item xs={4}>
-                  <TextField
-                    fullWidth
-                    label="Anzahl geernteter Stecklinge"
-                    type="number"
-                    value={cuttingsHarvested}
-                    onChange={(e) => setCuttingsHarvested(parseInt(e.target.value) || 0)}
-                    inputProps={{ min: 0 }}
-                    sx={{ 
-                      '& input': { fontSize: '1.3rem', height: '40px' },
-                      '& label': { fontSize: '1.1rem' }
-                    }}
-                  />
-                </Grid>
+                <Divider />
 
-                <Grid item xs={4}>
-                  <TextField
-                    fullWidth
-                    label="Bewurzelungs-Erfolgsquote (%)"
-                    type="number"
-                    value={rootingSuccessRate || ''}
-                    onChange={(e) => setRootingSuccessRate(e.target.value ? parseFloat(e.target.value) : null)}
-                    inputProps={{ min: 0, max: 100, step: 0.1 }}
-                    placeholder="Optional"
-                    sx={{ 
-                      '& input': { fontSize: '1.3rem', height: '40px' },
-                      '& label': { fontSize: '1.1rem' }
-                    }}
-                  />
-                </Grid>
+                {/* Erntedaten */}
+                <Box>
+                  <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 500 }}>
+                    Erntedaten
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        label="Anzahl geernteter Stecklinge"
+                        type="number"
+                        value={cuttingsHarvested}
+                        onChange={(e) => setCuttingsHarvested(parseInt(e.target.value) || 0)}
+                        inputProps={{ min: 0 }}
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        label="Bewurzelungs-Erfolgsquote (%)"
+                        type="number"
+                        value={rootingSuccessRate || ''}
+                        onChange={(e) => setRootingSuccessRate(e.target.value ? parseFloat(e.target.value) : null)}
+                        inputProps={{ min: 0, max: 100, step: 0.1 }}
+                        helperText="Optional - Prozentuale Erfolgsquote"
+                      />
+                    </Grid>
+                  </Grid>
+                </Box>
 
-                <Grid item xs={4}>
-                  <Typography variant="h6" gutterBottom>Qualität der Stecklinge</Typography>
+                <Divider />
+
+                {/* Qualität */}
+                <Box>
+                  <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 500 }}>
+                    Qualität der Stecklinge
+                  </Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Rating
                       value={cuttingQuality}
                       onChange={(e, value) => setCuttingQuality(value)}
                       max={10}
                       size="large"
-                      sx={{ fontSize: '1.8rem' }}
                     />
-                    <Typography variant="h4">{cuttingQuality}/10</Typography>
+                    <Typography variant="h6">{cuttingQuality}/10</Typography>
                   </Box>
-                </Grid>
-              </Grid>
-            </Paper>
-
-            {/* Gesamtbewertung */}
-            <Paper sx={{ 
-              flex: '0 0 30%', 
-              p: 3, 
-              bgcolor: '#fff3e0',
-              border: '4px solid #ffb74d',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h5" sx={{ mb: 2, color: '#f57c00' }}>
-                  Gesamtbewertung
-                </Typography>
-                <Typography variant="h1" sx={{ fontWeight: 'bold', color: '#f57c00' }}>
-                  ⭐ {calculateOverallScore()}
-                </Typography>
-              </Box>
-            </Paper>
-          </Box>
-        </Box>
-
-        {/* Rechte Spalte: Historie (25%) */}
-        <Paper sx={{ 
-          flex: '0 0 25%',
-          p: 2.5,
-          bgcolor: 'white',
-          display: 'flex',
-          flexDirection: 'column'
-        }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <HistoryIcon sx={{ mr: 1.5, fontSize: 32, color: 'primary.main' }} />
-            <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
-              Bewertungshistorie
-            </Typography>
-          </Box>
-          
-          <Divider sx={{ mb: 2 }} />
-          
-          {loadingHistory ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-              <CircularProgress size={40} />
-            </Box>
-          ) : ratingHistory.length === 0 ? (
-            <Typography variant="h6" color="text.secondary" align="center" sx={{ mt: 4 }}>
-              Noch keine Bewertungen vorhanden
-            </Typography>
-          ) : (
-            <List sx={{ 
-              flex: 1, 
-              overflow: 'auto',
-              '&::-webkit-scrollbar': {
-                width: '8px',
-              },
-              '&::-webkit-scrollbar-track': {
-                background: '#f1f1f1',
-              },
-              '&::-webkit-scrollbar-thumb': {
-                background: '#888',
-                borderRadius: '4px',
-              },
-            }}>
-              {ratingHistory.map((rating, index) => (
-                <Box key={rating.id}>
-                  <ListItem alignItems="flex-start" sx={{ py: 2, px: 1 }}>
-                    <ListItemAvatar>
-                      <Avatar sx={{ bgcolor: 'warning.main', width: 56, height: 56 }}>
-                        <StarIcon sx={{ fontSize: 28 }} />
-                      </Avatar>
-                    </ListItemAvatar>
-                    <ListItemText
-                      sx={{ ml: 1 }}
-                      primary={
-                        <Box sx={{ mb: 1 }}>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Typography variant="h5">
-                              ⭐ {rating.overall_score}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              {new Date(rating.created_at).toLocaleDateString('de-DE')}
-                            </Typography>
-                          </Box>
-                          <Typography variant="body1" sx={{ mt: 0.5 }}>
-                            {new Date(rating.created_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
-                          </Typography>
-                        </Box>
-                      }
-                      secondary={
-                        <>
-                          <Typography component="span" variant="h6" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                            <PersonIcon sx={{ fontSize: 20, mr: 0.5 }} />
-                            {rating.rated_by?.display_name || 'Unbekannt'}
-                          </Typography>
-                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
-                            <Chip 
-                              label={`${rating.cuttings_harvested} Stecklinge`}
-                              sx={{ fontSize: '0.9rem' }}
-                            />
-                            <Chip 
-                              label={formatRegrowthSpeed(rating.regrowth_speed)}
-                              sx={{ fontSize: '0.9rem' }}
-                            />
-                            {rating.rooting_success_rate && (
-                              <Chip 
-                                label={`${rating.rooting_success_rate}% Erfolg`}
-                                color="success"
-                                sx={{ fontSize: '0.9rem' }}
-                              />
-                            )}
-                          </Box>
-                          {rating.health_notes && (
-                            <Typography variant="body2" sx={{ fontStyle: 'italic', color: 'text.secondary' }}>
-                              "{rating.health_notes}"
-                            </Typography>
-                          )}
-                        </>
-                      }
-                    />
-                  </ListItem>
-                  {index < ratingHistory.length - 1 && <Divider variant="inset" component="li" />}
                 </Box>
-              ))}
-            </List>
-          )}
-        </Paper>
-      </DialogContent>
 
-      <DialogActions sx={{ 
-        p: 2, 
-        bgcolor: 'grey.100',
+                {/* Gesamtbewertung */}
+                <Box sx={{ 
+                  mt: 'auto',
+                  p: 3, 
+                  bgcolor: '#ecf5f0ff',
+                  borderRadius: 2,
+                  textAlign: 'center'
+                }}>
+                  <Typography variant="h6" sx={{ color: '#2e7d32', mb: 1 }}>
+                    Gesamtbewertung
+                  </Typography>
+                  <Typography variant="h2" sx={{ fontWeight: 'bold', color: '#2e7d32' }}>
+                    {calculateOverallScore()}
+                  </Typography>
+                  <Typography variant="subtitle1" sx={{ color: '#2e7d32' }}>
+                    von 10.0
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+
+          {/* Spalte 3: Historie */}
+          <Card sx={{ bgcolor: 'white', boxShadow: 2 }}>
+            <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                <HistoryIcon sx={{ mr: 1.5, fontSize: 28, color: '#2e7d32' }} />
+                <Typography variant="h5" sx={{ fontWeight: 500 }}>
+                  Bewertungshistorie
+                </Typography>
+                <Chip 
+                  label={`${ratingHistory.length} Einträge`}
+                  size="small"
+                  sx={{ ml: 'auto' }}
+                />
+              </Box>
+
+              <Box sx={{ flex: 1, overflow: 'hidden' }}>
+                {loadingHistory ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                    <CircularProgress size={40} />
+                  </Box>
+                ) : ratingHistory.length === 0 ? (
+                  <Box sx={{ 
+                    height: '100%', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    color: 'text.secondary'
+                  }}>
+                    <Typography variant="body1">
+                      Keine vorherigen Bewertungen vorhanden
+                    </Typography>
+                  </Box>
+                ) : (
+                  <List sx={{ 
+                    height: '100%',
+                    overflow: 'auto',
+                    '&::-webkit-scrollbar': {
+                      width: '8px',
+                    },
+                    '&::-webkit-scrollbar-track': {
+                      background: '#f1f1f1',
+                    },
+                    '&::-webkit-scrollbar-thumb': {
+                      background: '#bdbdbd',
+                      borderRadius: '4px',
+                    },
+                  }}>
+                    {ratingHistory.map((rating, index) => (
+                      <Box key={rating.id}>
+                        <ListItem sx={{ px: 1 }}>
+                          <ListItemAvatar>
+                            <Avatar sx={{ bgcolor: '#2e7d32' }}>
+                              <Typography variant="body2">{rating.overall_score}</Typography>
+                            </Avatar>
+                          </ListItemAvatar>
+                          <ListItemText
+                            primary={
+                              <Box>
+                                <Typography variant="body2">
+                                  {new Date(rating.created_at).toLocaleDateString('de-DE')} • {new Date(rating.created_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+                                </Typography>
+                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                  {rating.rated_by?.display_name || 'Unbekannt'}
+                                </Typography>
+                              </Box>
+                            }
+                            secondary={
+                              <Box sx={{ mt: 1 }}>
+                                <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                                  <Chip 
+                                    label={`${rating.cuttings_harvested} Stecklinge`}
+                                    size="small"
+                                    variant="outlined"
+                                  />
+                                  <Chip 
+                                    label={formatRegrowthSpeed(rating.regrowth_speed)}
+                                    size="small"
+                                    variant="outlined"
+                                  />
+                                  {rating.rooting_success_rate && (
+                                    <Chip 
+                                      label={`${rating.rooting_success_rate}% Erfolg`}
+                                      size="small"
+                                      variant="outlined"
+                                      color="success"
+                                    />
+                                  )}
+                                </Box>
+                                {rating.health_notes && (
+                                  <Typography variant="caption" sx={{ display: 'block', mt: 1, fontStyle: 'italic' }}>
+                                    {rating.health_notes}
+                                  </Typography>
+                                )}
+                              </Box>
+                            }
+                          />
+                        </ListItem>
+                        {index < ratingHistory.length - 1 && <Divider component="li" />}
+                      </Box>
+                    ))}
+                  </List>
+                )}
+              </Box>
+            </CardContent>
+          </Card>
+        </Box>
+      </Box>
+
+      {/* Footer Actions */}
+      <Box sx={{ 
+        p: 2,
+        bgcolor: '#f5f5f5',
+        borderTop: '1px solid #e0e0e0',
         display: 'flex',
         justifyContent: 'space-between',
-        height: '70px'
+        alignItems: 'center',
+        height: '80px'
       }}>
         <Button 
           onClick={handleDialogClose} 
+          variant="outlined"
           size="large"
-          sx={{ minWidth: '150px', height: '50px', fontSize: '1.1rem' }}
+          sx={{ minWidth: '150px', height: '50px' }}
         >
           Abbrechen
         </Button>
+        
+        <Typography variant="body2" color="text.secondary">
+          cannaUNITY Cannabis Qualitätssicherung
+        </Typography>
+
         <Button 
           onClick={startRfidScan}
           variant="contained"
-          color="primary"
           size="large"
           disabled={loading || cuttingsHarvested === 0}
-          startIcon={loading ? <CircularProgress size={24} /> : <CreditCardIcon />}
-          sx={{ minWidth: '400px', height: '50px', fontSize: '1.2rem' }}
+          startIcon={loading ? <CircularProgress size={20} /> : <CreditCardIcon />}
+          sx={{ 
+            minWidth: '350px', 
+            height: '50px',
+            bgcolor: '#2b772fff',
+            '&:hover': {
+              bgcolor: '#165719ff'
+            }
+          }}
         >
           Mit RFID autorisieren & speichern
         </Button>
-      </DialogActions>
+      </Box>
     </Dialog>
   )
 }

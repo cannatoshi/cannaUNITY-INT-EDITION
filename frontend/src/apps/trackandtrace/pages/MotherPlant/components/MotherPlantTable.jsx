@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { 
   Box, Typography, Button, IconButton, Tooltip, Checkbox, 
   Table, TableContainer, TableHead, TableRow, TableCell, TableBody,
-  Paper, FormControlLabel, Pagination, CircularProgress, Badge
+  Paper, FormControlLabel, Pagination, CircularProgress
 } from '@mui/material'
 import ScienceIcon from '@mui/icons-material/Science'
 import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment'
@@ -201,7 +201,6 @@ const MotherPlantTable = ({
                    batch.plant_rating_count ||
                    batch.ratings_count ||
                    batch.total_ratings ||
-                   (batch.average_batch_rating ? 1 : 0) || // Wenn Rating vorhanden, mindestens 1
                    plant?.rating_count || 
                    0;
     }
@@ -383,20 +382,12 @@ const MotherPlantTable = ({
                     }
                   }}
                 >
-                  <Tooltip title={`Pflanze bewerten (${combinedData.rating_count} Bewertungen)`}>
+                  <Tooltip title="Pflanze bewerten">
                     <IconButton 
                       size="small" 
                       sx={{ 
                         p: 0.5,
-                        color: combinedData.is_premium ? 'warning.main' : 'rgba(0, 0, 0, 0.54)',
-                        '& .MuiBadge-root': {
-                          '& .MuiBadge-badge': {
-                            fontSize: '0.7rem',
-                            minWidth: '18px',
-                            height: '18px',
-                            padding: '0 4px'
-                          }
-                        }
+                        color: combinedData.is_premium ? 'warning.main' : 'rgba(0, 0, 0, 0.54)'
                       }}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -427,14 +418,7 @@ const MotherPlantTable = ({
                         onOpenRatingDialog(batch, plantData);
                       }}
                     >
-                      <Badge 
-                        badgeContent={combinedData.rating_count} 
-                        color="primary" 
-                        max={99} 
-                        showZero
-                      >
-                        <StarIcon sx={{ fontSize: '1rem' }} />
-                      </Badge>
+                      <StarIcon sx={{ fontSize: '1rem' }} />
                     </IconButton>
                   </Tooltip>
                 </Box>
@@ -546,7 +530,7 @@ const MotherPlantTable = ({
                   }
                 }}
               >
-                <Tooltip title={`Bilder verwalten (${combinedData.image_count})`}>
+                <Tooltip title="Bilder verwalten">
                   <IconButton 
                     size="small" 
                     onClick={(e) => {
@@ -555,20 +539,10 @@ const MotherPlantTable = ({
                     }}
                     sx={{ 
                       p: 0.5,
-                      color: 'rgba(0, 0, 0, 0.54)',
-                      '& .MuiBadge-root': {
-                        '& .MuiBadge-badge': {
-                          fontSize: '0.7rem',
-                          minWidth: '18px',
-                          height: '18px',
-                          padding: '0 4px'
-                        }
-                      }
+                      color: 'rgba(0, 0, 0, 0.54)'
                     }}
                   >
-                    <Badge badgeContent={combinedData.image_count} color="primary" showZero>
-                      <PhotoCameraIcon sx={{ fontSize: '1rem' }} />
-                    </Badge>
+                    <PhotoCameraIcon sx={{ fontSize: '1rem' }} />
                   </IconButton>
                 </Tooltip>
               </Box>
@@ -625,7 +599,7 @@ const MotherPlantTable = ({
                   }
                 }}
               >
-                <Tooltip title={`Bilder verwalten (${batch.image_count || 0})`}>
+                <Tooltip title="Bilder verwalten">
                   <IconButton 
                     size="small" 
                     onClick={(e) => {
@@ -634,20 +608,10 @@ const MotherPlantTable = ({
                     }}
                     sx={{ 
                       p: 0.5,
-                      color: 'rgba(0, 0, 0, 0.54)',
-                      '& .MuiBadge-root': {
-                        '& .MuiBadge-badge': {
-                          fontSize: '0.7rem',
-                          minWidth: '18px',
-                          height: '18px',
-                          padding: '0 4px'
-                        }
-                      }
+                      color: 'rgba(0, 0, 0, 0.54)'
                     }}
                   >
-                    <Badge badgeContent={batch.image_count || 0} color="primary" showZero>
-                      <PhotoCameraIcon sx={{ fontSize: '1rem' }} />
-                    </Badge>
+                    <PhotoCameraIcon sx={{ fontSize: '1rem' }} />
                   </IconButton>
                 </Tooltip>
               </Box>

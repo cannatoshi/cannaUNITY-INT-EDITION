@@ -336,11 +336,11 @@ const RatingDialog = ({
         sx: { 
           position: 'fixed',
           overflow: 'hidden',
-          width: '1920px',
-          height: '1080px',
-          maxWidth: '1920px',
-          maxHeight: '1080px',
-          margin: 'auto',
+          width: '100vw',
+          height: '100vh',
+          maxWidth: '100vw',
+          maxHeight: '100vh',
+          margin: 0,
           bgcolor: '#f8f9fa'
         }
       }}
@@ -477,14 +477,20 @@ const RatingDialog = ({
         p: 3, 
         display: 'flex',
         gap: 3,
-        height: viewMode === 'history' ? 'calc(100vh - 70px - 80px - 52px)' : 'calc(100vh - 70px - 80px)', // Alert height berücksichtigen
+        height: viewMode === 'history' ? 'calc(100vh - 70px - 80px - 52px)' : 'calc(100vh - 70px - 80px)',
+        overflow: 'auto'
       }}>
         {/* Hauptbereich - 3 Spalten */}
         <Box sx={{ 
           flex: 1,
           display: 'grid',
-          gridTemplateColumns: '1fr 1fr 1fr',
-          gap: 3
+          gridTemplateColumns: {
+            xs: '1fr',
+            md: '1fr 1fr',
+            lg: '1fr 1fr 1fr'
+          },
+          gap: 3,
+          width: '100%'
         }}>
           {/* Spalte 1: Gesundheitsbewertung */}
           <Card sx={{ bgcolor: 'white', boxShadow: 2, opacity: isReadOnly ? 0.95 : 1 }}>

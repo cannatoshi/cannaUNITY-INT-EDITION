@@ -503,7 +503,8 @@ class MotherPlantBatchSerializer(serializers.ModelSerializer):
 
     premium_plants_count = serializers.SerializerMethodField()
     average_batch_rating = serializers.SerializerMethodField()
-    
+    first_plant_id = serializers.SerializerMethodField()
+
     class Meta:
         model = MotherPlantBatch
         fields = [
@@ -511,7 +512,8 @@ class MotherPlantBatchSerializer(serializers.ModelSerializer):
             'created_at', 'member', 'member_id', 'room', 'room_id',
             'seed_strain', 'seed_batch_number', 'active_plants_count', 
             'destroyed_plants_count', 'converted_to_cuttings_count',
-            'images', 'image_count', 'premium_plants_count', 'average_batch_rating'
+            'images', 'image_count', 'premium_plants_count', 'average_batch_rating',
+            'first_plant_id'
         ]
     
     def get_seed_strain(self, obj):
@@ -549,6 +551,19 @@ class MotherPlantBatchSerializer(serializers.ModelSerializer):
                 ratings.append(plant.average_rating)
         return round(sum(ratings) / len(ratings), 1) if ratings else None
 
+    def get_first_plant_id(self, obj):
+        """Gibt die ID der ersten aktiven Pflanze zurück"""
+        first_plant = obj.plants.filter(is_destroyed=False).first()
+        return str(first_plant.id) if first_plant else None
+    
+    def get_rating_count(self, obj):
+        """Zählt alle Bewertungen aller Pflanzen in diesem Batch"""
+        from django.db.models import Count
+        # Da es nur eine Pflanze pro Batch gibt, können wir direkt zählen
+        first_plant = obj.plants.first()
+        if first_plant:
+            return first_plant.ratings.count()
+        return 0
 
 class FloweringPlantSerializer(serializers.ModelSerializer):
     # Serializer für das Mitglied, das vernichtet hat

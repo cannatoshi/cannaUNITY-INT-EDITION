@@ -12,7 +12,7 @@ import LoadingIndicator from '@/components/common/LoadingIndicator'
 import DestroyDialog from '@/components/dialogs/DestroyDialog'
 import CreateCuttingDialog from '@/components/dialogs/CreateCuttingDialog'
 import AnimatedTabPanel from '@/components/common/AnimatedTabPanel'
-import RatingDialog from '@/components/dialogs/RatingDialog' // NEU
+import RatingDialog from '@/components/dialogs/RatingDialog'
 
 // Spezifische Komponenten
 import MotherPlantTable from './components/MotherPlantTable'
@@ -40,7 +40,7 @@ export default function MotherPlantPage() {
   const [selectedPlants, setSelectedPlants] = useState({})
   const [loadingOptions, setLoadingOptions] = useState(false)
   
-  // NEU: States für Rating Dialog
+  // States für Rating Dialog
   const [openRatingDialog, setOpenRatingDialog] = useState(false)
   const [selectedBatchForRating, setSelectedBatchForRating] = useState(null)
   const [selectedPlantForRating, setSelectedPlantForRating] = useState(null)
@@ -86,7 +86,7 @@ export default function MotherPlantPage() {
   const [openImageModal, setOpenImageModal] = useState(false)
   const [selectedBatchForImages, setSelectedBatchForImages] = useState(null)
 
-  // NEU: Handler für Rating Dialog
+  // Handler für Rating Dialog
   const handleOpenRatingDialog = (batch, plant = null) => {
     setSelectedBatchForRating(batch)
     setSelectedPlantForRating(plant)
@@ -444,9 +444,16 @@ export default function MotherPlantPage() {
     loadDestroyedPlantsForBatch(batchId, page)
   }
 
-  // Aktualisierte refreshData Funktion mit verbesserter Zähler-Logik
+  // Aktualisierte refreshData Funktion
   const refreshData = () => {
-    // Daten je nach aktivem Tab neu laden
+    // Hauptdaten aktualisieren
+    if (tabValue === 0 || tabValue === 2) {
+      loadMotherBatches(currentPage);
+    } else if (tabValue === 1) {
+      loadCuttingBatches(currentPage);
+    }
+    
+    // Details aktualisieren, falls ein Batch expandiert ist
     if (expandedBatchId) {
       if (tabValue === 0) {
         loadPlantsForBatch(expandedBatchId, plantsCurrentPage[expandedBatchId] || 1);
@@ -455,14 +462,7 @@ export default function MotherPlantPage() {
       }
     }
     
-    // Hauptdaten aktualisieren
-    if (tabValue === 0 || tabValue === 2) {
-      loadMotherBatches(currentPage); // Für Tab 0 (Aktive) und Tab 2 (Vernichtete)
-    } else if (tabValue === 1) {
-      loadCuttingBatches(currentPage); // Für Tab 1 (Stecklinge)
-    }
-    
-    // Verbessert: Lade alle Zähler unabhängig vom Tab
+    // Zähler aktualisieren
     loadAllCounts();
   };
 
@@ -873,7 +873,7 @@ export default function MotherPlantPage() {
         ]}
       />
 
-      {/* NEU: Rating Dialog */}
+      {/* Rating Dialog bleibt erhalten */}
       <RatingDialog
         open={openRatingDialog}
         onClose={handleCloseRatingDialog}

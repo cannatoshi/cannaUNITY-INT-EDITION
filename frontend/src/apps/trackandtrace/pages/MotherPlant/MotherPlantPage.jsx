@@ -142,7 +142,8 @@ export default function MotherPlantPage() {
       setLoading(false)
     }
   }
-  
+
+
   // Funktion zum Laden der Stecklings-Chargen
   const loadCuttingBatches = async (page = 1) => {
     if (tabValue !== 1) return; // Nur für den Stecklinge-Tab laden (jetzt Tab 1)
@@ -626,33 +627,43 @@ export default function MotherPlantPage() {
     { 
       label: (
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Typography component="span" sx={{ fontWeight: 'bold', fontSize: '0.75rem' }}>CHARGEN</Typography>
-          <Typography component="span" sx={{ mx: 0.3, color: 'primary.main', fontWeight: 500, fontSize: '0.75rem' }}>{`(${activeBatchesCount})`}</Typography>
-          <ArrowForwardIcon sx={{ mx: 0.3, fontSize: 10, color: 'primary.main' }} />
-          <Typography component="span" sx={{ fontWeight: 'bold', fontSize: '0.75rem' }}>AKTIVE PFLANZEN</Typography>
-          <Typography component="span" sx={{ mx: 0.3, color: 'primary.main', fontWeight: 500, fontSize: '0.75rem' }}>{`(${activePlantsCount})`}</Typography>
+          <Typography component="span" sx={{ fontWeight: 'bold', fontSize: '0.75rem' }}>
+            AKTIVE MUTTERPFLANZEN
+          </Typography>
+          <Typography component="span" sx={{ mx: 0.3, color: 'primary.main', fontWeight: 500, fontSize: '0.75rem' }}>
+            {`(${activePlantsCount})`}
+          </Typography>
         </Box>
       ) 
     },
     { 
       label: (
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Typography component="span" sx={{ fontWeight: 'bold', fontSize: '0.75rem' }}>CHARGEN</Typography>
-          <Typography component="span" sx={{ mx: 0.3, color: 'primary.main', fontWeight: 500, fontSize: '0.75rem' }}>{`(${cuttingBatchCount})`}</Typography>
+          <Typography component="span" sx={{ fontWeight: 'bold', fontSize: '0.75rem' }}>
+            MUTTERPFLANZEN
+          </Typography>
+          <Typography component="span" sx={{ mx: 0.3, color: 'primary.main', fontWeight: 500, fontSize: '0.75rem' }}>
+            {`(${cuttingBatchCount})`} {/* Anzahl der Mutterpflanzen */}
+          </Typography>
           <ArrowForwardIcon sx={{ mx: 0.3, fontSize: 10, color: 'primary.main' }} />
-          <Typography component="span" sx={{ fontWeight: 'bold', fontSize: '0.75rem' }}>ZU STECKLINGE</Typography>
-          <Typography component="span" sx={{ mx: 0.3, color: 'primary.main', fontWeight: 500, fontSize: '0.75rem' }}>{`(${cuttingCount})`}</Typography>
+          <Typography component="span" sx={{ fontWeight: 'bold', fontSize: '0.75rem' }}>
+            ZU STECKLINGE
+          </Typography>
+          <Typography component="span" sx={{ mx: 0.3, color: 'primary.main', fontWeight: 500, fontSize: '0.75rem' }}>
+            {`(${cuttingCount})`} {/* Anzahl der Stecklinge */}
+          </Typography>
         </Box>
       )
     },
     { 
       label: (
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Typography component="span" sx={{ fontWeight: 'bold', fontSize: '0.75rem' }}>CHARGEN</Typography>
-          <Typography component="span" sx={{ mx: 0.3, color: 'error.main', fontWeight: 500, fontSize: '0.75rem' }}>{`(${destroyedBatchesCount})`}</Typography>
-          <ArrowForwardIcon sx={{ mx: 0.3, fontSize: 10, color: 'error.main' }} />
-          <Typography component="span" sx={{ fontWeight: 'bold', fontSize: '0.75rem' }}>VERNICHTET</Typography>
-          <Typography component="span" sx={{ mx: 0.3, color: 'error.main', fontWeight: 500, fontSize: '0.75rem' }}>{`(${destroyedPlantsCount})`}</Typography>
+          <Typography component="span" sx={{ fontWeight: 'bold', fontSize: '0.75rem' }}>
+            MUTTERPFLANZEN VERNICHTET
+          </Typography>
+          <Typography component="span" sx={{ mx: 0.3, color: 'error.main', fontWeight: 500, fontSize: '0.75rem' }}>
+            {`(${destroyedPlantsCount})`}
+          </Typography>
         </Box>
       )
     }

@@ -10,6 +10,8 @@ import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment'
 import ContentCutIcon from '@mui/icons-material/ContentCut'
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera'
 import StarIcon from '@mui/icons-material/Star'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import CancelIcon from '@mui/icons-material/Cancel'
 
 // API-Client importieren
 import api from '@/utils/api'
@@ -22,6 +24,19 @@ import LoadingIndicator from '@/components/common/LoadingIndicator'
 
 /**
  * MotherPlantTable Komponente für die Darstellung der Mutterpflanzen-Tabelle
+ * 
+ * WICHTIGER HINWEIS:
+ * Diese Komponente wurde von einem System mit mehreren Pflanzen pro Charge
+ * auf ein System mit nur einer Pflanze pro Charge umgestellt.
+ * 
+ * Problem: Die Plant-Daten werden separat geladen (durch onExpandBatch),
+ * obwohl es jetzt nur noch eine Pflanze pro Batch gibt.
+ * 
+ * Ideale Lösung: Die Parent-Component sollte die Plant-ID direkt mit den
+ * Batch-Daten liefern, da es eine 1:1 Beziehung ist.
+ * 
+ * Workaround: Wir erstellen minimale Plant-Objekte aus den Batch-Daten,
+ * wenn die echten Plant-Daten noch nicht geladen sind.
  */
 const MotherPlantTable = ({
   tabValue,
@@ -88,7 +103,7 @@ const MotherPlantTable = ({
     }
   };
   
-  // Kombinierter useEffect für Stecklinge und vernichtete Pflanzen - außerhalb von renderBatchDetails!
+  // Kombinierter useEffect für Stecklinge und vernichtete Pflanzen
   useEffect(() => {
     // Batch-ID aus dem expandierten Batch ermitteln
     const currentBatch = data.find(batch => batch.id === expandedBatchId);
@@ -106,12 +121,12 @@ const MotherPlantTable = ({
     }
   }, [tabValue, expandedBatchId, data]);
 
-  // Spalten für den Tabellenkopf definieren
+  // Spalten für den Tabellenkopf definieren - mit Padding-Anpassung für erste Spalte
   const getHeaderColumns = () => {
     const baseColumns = [
-      { label: '', width: '3%', align: 'center' },
-      { label: 'Genetik', width: '12%', align: 'left' },
-      { label: 'Charge-Nummer', width: '22%', align: 'left' },
+      { label: '', width: '48px', align: 'center', padding: '8px' }, // Gleiche Breite wie expand icon container
+      { label: 'Genetik', width: '15%', align: 'left' },
+      { label: 'Pflanzen-Nummer', width: '20%', align: 'left' },
     ];
 
     // Tab-spezifische Spalten je nach aktivem Tab
@@ -119,18 +134,19 @@ const MotherPlantTable = ({
       // Tab 0: Aktive Pflanzen oder Tab 2: Vernichtete Pflanzen
       return [
         ...baseColumns,
-        { label: 'Aktiv/Gesamt', width: '8%', align: 'center' },
-        { label: 'Vernichtet', width: '10%', align: 'left' },
-        { label: 'Kultiviert von', width: '15%', align: 'left' },
-        { label: 'Raum', width: '15%', align: 'left' },
+        { label: 'Status', width: '6%', align: 'center' },
+        { label: 'Bewertung', width: '10%', align: 'center' },
+        { label: 'Vernichtet', width: '8%', align: 'left' },
+        { label: 'Kultiviert von', width: '13%', align: 'left' },
+        { label: 'Raum', width: '13%', align: 'left' },
         { label: 'Erstellt am', width: '10%', align: 'left' },
-        { label: 'Aktionen', width: '5%', align: 'center' }
+        { label: 'Aktionen', width: '15%', align: 'center' }
       ];
     } else {
       // Tab 1: Stecklinge-Tab
       return [
         ...baseColumns,
-        { label: 'Aktiv/Gesamt', width: '8%', align: 'center' },
+        { label: 'Stecklinge', width: '8%', align: 'center' },
         { label: 'Vernichtet', width: '10%', align: 'left' },
         { label: 'Erstellt von', width: '15%', align: 'left' },
         { label: 'Raum', width: '15%', align: 'left' },
@@ -140,27 +156,144 @@ const MotherPlantTable = ({
     }
   };
 
+  // Hilfsfunktion um die erste Pflanze aus batchPlants zu holen
+  const getFirstPlant = (batch) => {
+    if (batchPlants && batchPlants[batch.id] && batchPlants[batch.id].length > 0) {
+      return batchPlants[batch.id][0];
+    }
+    return null;
+  };
+
+  // Hilfsfunktion um Batch- und Plant-Daten zu kombinieren
+  const getCombinedData = (batch) => {
+    const plant = getFirstPlant(batch);
+    
+    // WICHTIG: Die API liefert die Daten unter "average_batch_rating", nicht "mother_average_rating"!
+    
+    // Für die durchschnittliche Bewertung - average_batch_rating ist das richtige Feld!
+    const averageRating = batch.average_batch_rating || // Das ist das richtige Feld aus der API!
+                         batch.mother_average_rating || 
+                         batch.average_rating || 
+                         batch.plant_average_rating ||
+                         batch.avg_rating ||
+                         batch.rating ||
+                         plant?.average_rating || 
+                         null;
+    
+    // Für die Anzahl der Bewertungen - suche in allen möglichen Feldern
+    let ratingCount = 0;
+    
+    // Suche nach allen Feldern die "rating" und "count" enthalten
+    Object.keys(batch).forEach(key => {
+      if (key.toLowerCase().includes('rating') && key.toLowerCase().includes('count')) {
+        const value = batch[key];
+        if (typeof value === 'number' && value > ratingCount) {
+          ratingCount = value;
+        }
+      }
+    });
+    
+    // Falls immer noch 0, prüfe andere Quellen
+    if (ratingCount === 0) {
+      ratingCount = batch.average_batch_rating_count || 
+                   batch.mother_rating_count || 
+                   batch.rating_count || 
+                   batch.plant_rating_count ||
+                   batch.ratings_count ||
+                   batch.total_ratings ||
+                   (batch.average_batch_rating ? 1 : 0) || // Wenn Rating vorhanden, mindestens 1
+                   plant?.rating_count || 
+                   0;
+    }
+    
+    // Für Premium-Status - premium_plants_count zeigt an, ob Premium vorhanden
+    const isPremium = batch.premium_plants_count > 0 || // Das ist das richtige Feld!
+                     batch.is_premium_mother || 
+                     batch.is_premium || 
+                     batch.has_premium_mother ||
+                     batch.premium_mother ||
+                     plant?.is_premium_mother || 
+                     false;
+    
+    // Plant-ID - da es nur eine Pflanze pro Batch gibt, könnte die ID direkt im Batch sein
+    // Prüfe verschiedene mögliche Feldnamen
+    const plantId = batch.plant_id || 
+                   batch.mother_plant_id || 
+                   batch.single_plant_id ||
+                   batch.first_plant_id ||
+                   batch.plants?.[0]?.id || // Falls plants Array direkt mitgeliefert wird
+                   plant?.id || 
+                   null;
+    
+    return {
+      ...batch,
+      rating_count: ratingCount,
+      average_rating: averageRating,
+      is_premium: isPremium,
+      image_count: batch.image_count || 0,
+      plant_id: plantId
+    };
+  };
+
   // Funktion zum Erstellen der Spalten für eine Zeile
   const getRowColumns = (batch) => {
+    // Hole die kombinierten Daten
+    const combinedData = getCombinedData(batch);
+    const plant = getFirstPlant(batch);
+    
+    // Debug Info nur einmal loggen
+    if (process.env.NODE_ENV === 'development' && !window._debugLogShown) {
+      window._debugLogShown = true;
+      console.log('MotherPlantTable Debug Info:');
+      console.log('- Total batches:', data.length);
+      console.log('- Batches with ratings:', data.filter(b => b.average_batch_rating).length);
+      console.log('- Loaded plants:', Object.keys(batchPlants).length);
+      
+      // Suche nach Plant-ID Feldern im ersten Batch
+      if (data[0]) {
+        const plantIdFields = Object.keys(data[0]).filter(key => 
+          key.toLowerCase().includes('plant') && 
+          (key.toLowerCase().includes('id') || key === 'plants')
+        );
+        console.log('- Potential plant ID fields in batch:', plantIdFields);
+        plantIdFields.forEach(field => {
+          console.log(`  - ${field}:`, data[0][field]);
+        });
+      }
+    }
+    
     // Basis-Spalten für alle Tabs
     const baseColumns = [
       {
-        content: '',
+        content: '', // Platz für Expand-Icon
         width: '3%'
       },
       {
-        content: batch.seed_strain || batch.mother_strain,
-        width: '12%',
-        bold: true,
-        icon: ScienceIcon,
-        iconColor: 'primary.main'
+        content: (
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <ScienceIcon sx={{ color: 'primary.main', fontSize: '0.9rem', mr: 0.8 }} />
+            <Typography
+              variant="body2"
+              sx={{
+                fontWeight: 'bold',
+                fontSize: '0.8rem',
+                color: 'inherit',
+                lineHeight: 1.4,
+                // Überschreibe die Ellipsis-Einstellungen
+                whiteSpace: 'normal',
+                overflow: 'visible',
+                textOverflow: 'unset'
+              }}
+            >
+              {batch.seed_strain || batch.mother_strain}
+            </Typography>
+          </Box>
+        ),
+        width: '15%'
       },
       {
-        content: batch.batch_number ? 
-          // Hier die Änderung: füge "charge:" hinzu, falls nicht vorhanden
-          `${batch.batch_number.startsWith('charge:') ? '' : 'charge:'}${batch.batch_number}`
-          : '',
-        width: '22%',
+        content: batch.batch_number || '',
+        width: '17%', // Angepasst
         fontFamily: 'monospace',
         fontSize: '0.85rem'
       }
@@ -171,58 +304,279 @@ const MotherPlantTable = ({
       return [
         ...baseColumns,
         {
-          content: `${batch.active_plants_count}/${batch.quantity}`,
-          width: '8%',
+          // Status-Icon
+          content: batch.active_plants_count > 0 
+            ? <CheckCircleIcon sx={{ color: 'success.main' }} />
+            : <CancelIcon sx={{ color: 'error.main' }} />,
+          width: '6%',
           align: 'center'
         },
         {
-          // Nur die Zahl anzeigen, ohne "Pflanzen"
-          content: `${batch.destroyed_plants_count}`,
+          // Bewertungs-Spalte
+          content: plant ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+              {plant.average_rating && (
+                <Typography variant="body2" sx={{ color: 'warning.main' }}>
+                  ⭐ {plant.average_rating}
+                </Typography>
+              )}
+              
+              {plant.is_premium_mother && (
+                <Tooltip title="Premium Mutterpflanze">
+                  <Typography variant="caption" sx={{ 
+                    backgroundColor: 'warning.light',
+                    color: 'warning.dark',
+                    px: 1,
+                    py: 0.5,
+                    borderRadius: 1,
+                    fontWeight: 'bold'
+                  }}>
+                    PREMIUM
+                  </Typography>
+                </Tooltip>
+              )}
+            </Box>
+          ) : (
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>-</Typography>
+          ),
           width: '10%',
+          align: 'center'
+        },
+        {
+          // Vernichtete Pflanzen Anzahl
+          content: `${batch.destroyed_plants_count}`,
+          width: '8%',
           color: batch.destroyed_plants_count > 0 ? 'error.main' : 'text.primary'
         },
         {
           content: batch.member ? 
             (batch.member.display_name || `${batch.member.first_name} ${batch.member.last_name}`) 
             : "Nicht zugewiesen",
-          width: '15%'
+          width: '13%'
         },
         {
           content: batch.room ? batch.room.name : "Nicht zugewiesen",
-          width: '15%'
+          width: '13%'
         },
         {
           content: new Date(batch.created_at).toLocaleDateString('de-DE'),
           width: '10%'
         },
         {
+          // Erweiterte Aktionen-Spalte
           content: (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-              <Tooltip title={`Bilder verwalten (${batch.image_count || 0})`}>
-                <IconButton 
-                  size="small" 
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onOpenImageModal(batch, e)
-                  }}
-                  sx={{ 
-                    color: 'primary.main',
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 0.5 }}>
+              {/* Bewertungs-Button - nur anzeigen wenn wir im aktiven Tab sind */}
+              {tabValue === 0 && (
+                <Box
+                  sx={{
+                    border: '1px solid rgba(0, 0, 0, 0.12)',
+                    borderRadius: '4px',
+                    p: 0.5,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: 'white',
                     '&:hover': {
-                      backgroundColor: 'primary.light',
-                      color: 'primary.dark'
+                      backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                      borderColor: 'rgba(0, 0, 0, 0.23)'
                     }
                   }}
                 >
-                  <Badge badgeContent={batch.image_count || 0} color="primary">
-                    <PhotoCameraIcon />
-                  </Badge>
-                </IconButton>
-              </Tooltip>
+                  <Tooltip title={`Pflanze bewerten (${combinedData.rating_count} Bewertungen)`}>
+                    <IconButton 
+                      size="small" 
+                      sx={{ 
+                        p: 0.5,
+                        color: combinedData.is_premium ? 'warning.main' : 'rgba(0, 0, 0, 0.54)',
+                        '& .MuiBadge-root': {
+                          '& .MuiBadge-badge': {
+                            fontSize: '0.7rem',
+                            minWidth: '18px',
+                            height: '18px',
+                            padding: '0 4px'
+                          }
+                        }
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        
+                        // Prüfe ob wir eine Plant-ID direkt aus dem Batch extrahieren können
+                        const plantId = combinedData.plant_id || batch.id + '_plant';
+                        
+                        // Da es nur noch eine Pflanze pro Batch gibt, können wir
+                        // ein minimales Plant-Objekt erstellen, falls nötig
+                        const plantData = plant || {
+                          id: plantId,
+                          batch_id: batch.id,
+                          batch_number: batch.batch_number,
+                          rating_count: combinedData.rating_count,
+                          average_rating: combinedData.average_rating,
+                          is_premium_mother: combinedData.is_premium,
+                          is_destroyed: false
+                        };
+                        
+                        console.log('Opening rating dialog:', {
+                          batch_id: batch.id,
+                          plant_id: plantData.id,
+                          has_real_plant: !!plant,
+                          combined_plant_id: combinedData.plant_id
+                        });
+                        
+                        // Öffne den Dialog direkt mit den verfügbaren Daten
+                        onOpenRatingDialog(batch, plantData);
+                      }}
+                    >
+                      <Badge 
+                        badgeContent={combinedData.rating_count} 
+                        color="primary" 
+                        max={99} 
+                        showZero
+                      >
+                        <StarIcon sx={{ fontSize: '1rem' }} />
+                      </Badge>
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              )}
+              
+              {/* Stecklinge erstellen Button */}
+              {tabValue === 0 && (
+                <Box
+                  sx={{
+                    border: '1px solid rgba(0, 0, 0, 0.12)',
+                    borderRadius: '4px',
+                    p: 0.5,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: 'white',
+                    '&:hover': {
+                      backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                      borderColor: 'rgba(0, 0, 0, 0.23)'
+                    }
+                  }}
+                >
+                  <Tooltip title="Stecklinge erstellen">
+                    <IconButton 
+                      size="small" 
+                      sx={{ 
+                        p: 0.5,
+                        color: 'rgba(0, 0, 0, 0.54)'
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        
+                        // Erstelle minimale Plant-Daten falls nötig
+                        const plantData = plant || {
+                          id: batch.id + '_plant',
+                          batch_id: batch.id,
+                          batch_number: batch.batch_number,
+                          is_destroyed: false
+                        };
+                        
+                        onOpenCreateCuttingDialog(batch, plantData);
+                      }}
+                    >
+                      <ContentCutIcon sx={{ fontSize: '1rem' }} />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              )}
+              
+              {/* Vernichten Button */}
+              {tabValue === 0 && (
+                <Box
+                  sx={{
+                    border: '1px solid rgba(0, 0, 0, 0.12)',
+                    borderRadius: '4px',
+                    p: 0.5,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: 'white',
+                    '&:hover': {
+                      backgroundColor: 'rgba(255, 0, 0, 0.04)',
+                      borderColor: 'error.main'
+                    }
+                  }}
+                >
+                  <Tooltip title="Pflanze vernichten">
+                    <IconButton 
+                      size="small" 
+                      sx={{ 
+                        p: 0.5,
+                        color: 'rgba(0, 0, 0, 0.54)',
+                        '&:hover': {
+                          color: 'error.main'
+                        }
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        
+                        // Da es nur eine Pflanze pro Batch gibt, 
+                        // kann der Dialog möglicherweise auch ohne spezifische Plant-ID funktionieren
+                        if (plant) {
+                          togglePlantSelection(batch.id, plant.id);
+                        }
+                        
+                        // Öffne den Dialog mit Batch-Daten
+                        onOpenDestroyDialog(batch);
+                      }}
+                    >
+                      <LocalFireDepartmentIcon sx={{ fontSize: '1rem' }} />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              )}
+              
+              {/* Bilder verwalten */}
+              <Box
+                sx={{
+                  border: '1px solid rgba(0, 0, 0, 0.12)',
+                  borderRadius: '4px',
+                  p: 0.5,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: 'white',
+                  '&:hover': {
+                    backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                    borderColor: 'rgba(0, 0, 0, 0.23)'
+                  }
+                }}
+              >
+                <Tooltip title={`Bilder verwalten (${combinedData.image_count})`}>
+                  <IconButton 
+                    size="small" 
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onOpenImageModal(batch, e)
+                    }}
+                    sx={{ 
+                      p: 0.5,
+                      color: 'rgba(0, 0, 0, 0.54)',
+                      '& .MuiBadge-root': {
+                        '& .MuiBadge-badge': {
+                          fontSize: '0.7rem',
+                          minWidth: '18px',
+                          height: '18px',
+                          padding: '0 4px'
+                        }
+                      }
+                    }}
+                  >
+                    <Badge badgeContent={combinedData.image_count} color="primary" showZero>
+                      <PhotoCameraIcon sx={{ fontSize: '1rem' }} />
+                    </Badge>
+                  </IconButton>
+                </Tooltip>
+              </Box>
             </Box>
           ),
-          width: '5%',
+          width: '13%',
           align: 'center',
-          stopPropagation: true // Wichtig: Verhindert das Öffnen des Akkordeons
+          stopPropagation: true
         }
       ];
     } else {
@@ -256,31 +610,52 @@ const MotherPlantTable = ({
         {
           content: (
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-              <Tooltip title={`Bilder verwalten (${batch.image_count || 0})`}>
-                <IconButton 
-                  size="small" 
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onOpenImageModal(batch, e)
-                  }}
-                  sx={{ 
-                    color: 'primary.main',
-                    '&:hover': {
-                      backgroundColor: 'primary.light',
-                      color: 'primary.dark'
-                    }
-                  }}
-                >
-                  <Badge badgeContent={batch.image_count || 0} color="primary">
-                    <PhotoCameraIcon />
-                  </Badge>
-                </IconButton>
-              </Tooltip>
+              <Box
+                sx={{
+                  border: '1px solid rgba(0, 0, 0, 0.12)',
+                  borderRadius: '4px',
+                  p: 0.5,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: 'white',
+                  '&:hover': {
+                    backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                    borderColor: 'rgba(0, 0, 0, 0.23)'
+                  }
+                }}
+              >
+                <Tooltip title={`Bilder verwalten (${batch.image_count || 0})`}>
+                  <IconButton 
+                    size="small" 
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onOpenImageModal(batch, e)
+                    }}
+                    sx={{ 
+                      p: 0.5,
+                      color: 'rgba(0, 0, 0, 0.54)',
+                      '& .MuiBadge-root': {
+                        '& .MuiBadge-badge': {
+                          fontSize: '0.7rem',
+                          minWidth: '18px',
+                          height: '18px',
+                          padding: '0 4px'
+                        }
+                      }
+                    }}
+                  >
+                    <Badge badgeContent={batch.image_count || 0} color="primary" showZero>
+                      <PhotoCameraIcon sx={{ fontSize: '1rem' }} />
+                    </Badge>
+                  </IconButton>
+                </Tooltip>
+              </Box>
             </Box>
           ),
           width: '5%',
           align: 'center',
-          stopPropagation: true // Wichtig: Verhindert das Öffnen des Akkordeons
+          stopPropagation: true
         }
       ];
     }
@@ -295,27 +670,27 @@ const MotherPlantTable = ({
     const date = new Date(batch.created_at).toLocaleDateString('de-DE');
     
     if (tabValue === 0 || tabValue === 2) {
-      // Mutterpflanzen Nachricht (Tab 0 und 2)
-      return `Charge ${batch.batch_number} mit Genetik ${batch.seed_strain} wurde von ${cultivator} am ${date} im Raum ${roomName} angelegt.`;
+      // Mutterpflanzen Nachricht
+      return `Mutterpflanze ${batch.batch_number} mit Genetik ${batch.seed_strain} wurde von ${cultivator} am ${date} im Raum ${roomName} angelegt.`;
     } else {
-      // Stecklinge Nachricht (Tab 1)
-      return `Charge ${batch.batch_number} mit ${batch.quantity} Stecklingen wurde von ${cultivator} am ${date} im Raum ${roomName} von Mutterpflanzen-Charge ${batch.mother_batch_number || "Unbekannt"} erstellt.`;
+      // Stecklinge Nachricht
+      return `${batch.quantity} Stecklinge wurden von ${cultivator} am ${date} im Raum ${roomName} von Mutterpflanze ${batch.mother_batch_number || "Unbekannt"} erstellt.`;
     }
   };
 
   // Detailansicht für einen Batch rendern
   const renderBatchDetails = (batch) => {
+    const plant = getFirstPlant(batch);
+    
     // Details-Card-Inhalte anpassen
     const chargeDetails = (
       <Box>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
           <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'rgba(0, 0, 0, 0.6)' }}>
-            Charge-Nummer:
+            Pflanzen-Nummer:
           </Typography>
           <Typography variant="body2" sx={{ color: 'rgba(0, 0, 0, 0.87)' }}>
-            {batch.batch_number?.startsWith('charge:') 
-              ? batch.batch_number 
-              : `charge:${batch.batch_number}`}
+            {batch.batch_number}
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
@@ -334,6 +709,24 @@ const MotherPlantTable = ({
             {batch.id}
           </Typography>
         </Box>
+        {plant && (
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+            <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'rgba(0, 0, 0, 0.6)' }}>
+              Pflanzen-UUID:
+            </Typography>
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                color: 'rgba(0, 0, 0, 0.87)',
+                fontFamily: 'monospace',
+                fontSize: '0.75rem',
+                wordBreak: 'break-all'
+              }}
+            >
+              {plant.id}
+            </Typography>
+          </Box>
+        )}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
           <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'rgba(0, 0, 0, 0.6)' }}>
             Erstellt am:
@@ -381,10 +774,10 @@ const MotherPlantTable = ({
     // Infos für Pflanzen-IDs oder Stecklinge-Infos
     const idsContent = tabValue === 0 || tabValue === 2
       ? (
-        // Stark vereinfachte plantIdsContent für Mutterpflanzen-Tabs (0 und 2)
+        // Vereinfachte Status-Anzeige für Mutterpflanzen
         <Box>
           <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1, color: 'rgba(0, 0, 0, 0.87)' }}>
-            Aktive Pflanzen
+            Pflanzenstatus
           </Typography>
           <Box
             sx={{
@@ -398,70 +791,41 @@ const MotherPlantTable = ({
             }}
           >
             {batch.active_plants_count > 0 ? (
-              <Typography variant="body2" sx={{ fontStyle: 'italic', color: 'primary.main' }}>
-                {batch.active_plants_count} aktive Mutterpflanzen vorhanden
+              <Typography variant="body2" sx={{ color: 'primary.main' }}>
+                ✓ Aktive Mutterpflanze
+              </Typography>
+            ) : batch.destroyed_plants_count > 0 ? (
+              <Typography variant="body2" sx={{ color: 'error.main' }}>
+                ✗ Mutterpflanze wurde vernichtet
               </Typography>
             ) : (
               <Typography variant="body2" sx={{ fontStyle: 'italic', color: 'text.secondary' }}>
-                Keine aktiven Pflanzen in dieser Charge vorhanden.
+                Status unbekannt
               </Typography>
             )}
           </Box>
           
-          <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1, color: 'rgba(0, 0, 0, 0.87)' }}>
-            Vernichtete Pflanzen
-          </Typography>
-          <Box
-            sx={{
-              backgroundColor: 'white',
-              p: 1.5,
-              borderRadius: '4px',
-              fontFamily: 'inherit',
-              fontSize: '0.85rem',
-              mb: 2,
-              border: '1px solid rgba(0, 0, 0, 0.12)'
-            }}
-          >
-            {batch.destroyed_plants_count > 0 ? (
-              loadingDestroyedDetails[batch.id] ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                  <CircularProgress size={20} color="error" />
-                </Box>
-              ) : (
-                <Typography variant="body2" sx={{ fontStyle: 'italic', color: 'error.main' }}>
-                  {batch.destroyed_plants_count} Mutterpflanzen wurden vernichtet.
+          {batch.converted_to_cuttings_count > 0 && (
+            <>
+              <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1, color: 'rgba(0, 0, 0, 0.87)' }}>
+                Stecklinge
+              </Typography>
+              <Box
+                sx={{
+                  backgroundColor: 'white',
+                  p: 1.5,
+                  borderRadius: '4px',
+                  fontFamily: 'inherit',
+                  fontSize: '0.85rem',
+                  border: '1px solid rgba(0, 0, 0, 0.12)'
+                }}
+              >
+                <Typography variant="body2" sx={{ color: 'primary.main' }}>
+                  {batch.converted_to_cuttings_count} Stecklinge wurden von dieser Mutterpflanze erstellt
                 </Typography>
-              )
-            ) : (
-              <Typography variant="body2" sx={{ fontStyle: 'italic', color: 'text.secondary' }}>
-                Keine vernichteten Pflanzen in dieser Charge.
-              </Typography>
-            )}
-          </Box>
-          
-          <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1, color: 'rgba(0, 0, 0, 0.87)' }}>
-            Konvertiert zu Stecklingen
-          </Typography>
-          <Box
-            sx={{
-              backgroundColor: 'white',
-              p: 1.5,
-              borderRadius: '4px',
-              fontFamily: 'inherit',
-              fontSize: '0.85rem',
-              border: '1px solid rgba(0, 0, 0, 0.12)'
-            }}
-          >
-            {batch.converted_to_cuttings_count > 0 || (tabValue === 1 && batch.quantity > 0) ? (
-              <Typography variant="body2" sx={{ fontStyle: 'italic', color: 'primary.main' }}>
-                {tabValue === 1 ? batch.quantity : (batch.converted_to_cuttings_count || 0)} Stecklinge wurden aus dieser Charge erstellt.
-              </Typography>
-            ) : (
-              <Typography variant="body2" sx={{ fontStyle: 'italic', color: 'text.secondary' }}>
-                Aus dieser Charge wurden noch keine Stecklinge erstellt.
-              </Typography>
-            )}
-          </Box>
+              </Box>
+            </>
+          )}
         </Box>
       )
       : (
@@ -538,11 +902,11 @@ const MotherPlantTable = ({
 
     const cards = [
       {
-        title: tabValue === 1 ? 'Stecklinge-Details' : 'Charge-Details',
+        title: tabValue === 1 ? 'Stecklinge-Details' : 'Pflanzen-Details',
         content: chargeDetails
       },
       {
-        title: tabValue === 1 ? 'Stecklinge-Info' : 'Pflanzen-IDs',
+        title: tabValue === 1 ? 'Stecklinge-Info' : 'Status',
         content: idsContent
       },
       {
@@ -556,7 +920,6 @@ const MotherPlantTable = ({
       // Nur für Tab 1 (Konvertiert zu Stecklingen)
       if (tabValue !== 1) return null;
 
-      // Entferne den useEffect von hier und verwende stattdessen den useEffect auf Hauptkomponentenebene
       const isLoading = loadingCuttings?.[batch.id] || false;
       const cuttings = batchCuttings?.[batch.id] || [];
       const currentPage = cuttingsCurrentPage?.[batch.id] || 1;
@@ -663,241 +1026,6 @@ const MotherPlantTable = ({
         {/* Stecklinge-Details nur im Stecklinge-Tab anzeigen */}
         {tabValue === 1 && renderCuttingsDetails()}
 
-        {/* PROBLEM-BEREICH: Je nach Tab die entsprechende Pflanzen-Tabelle anzeigen */}
-        {/* Tab 0: Aktive Pflanzen */}
-        {tabValue === 0 && (
-          <>
-            {batchPlants[batch.id] ? (
-              <Box sx={{ width: '100%', mt: 2, mb: 4 }}>
-                <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-                  <Typography variant="subtitle2" color="primary">
-                    Aktive Pflanzen
-                  </Typography>
-                  
-                  {batchPlants[batch.id]?.length > 0 && (
-                    <Box display="flex" alignItems="center">
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            checked={(selectedPlants[batch.id]?.length || 0) === (batchPlants[batch.id]?.length || 0)}
-                            indeterminate={(selectedPlants[batch.id]?.length || 0) > 0 && 
-                                          (selectedPlants[batch.id]?.length || 0) < (batchPlants[batch.id]?.length || 0)}
-                            onChange={(e) => selectAllPlantsInBatch(batch.id, e.target.checked)}
-                          />
-                        }
-                        label="Alle auswählen"
-                      />
-                      
-                      {/* Stecklinge erstellen Button für die ganze Charge */}
-                      <Button 
-                        variant="contained" 
-                        color="primary"
-                        onClick={() => onOpenCreateCuttingDialog(batch, null)}
-                        startIcon={<ContentCutIcon />}
-                        sx={{ ml: 2 }}
-                      >
-                        Stecklinge erstellen
-                      </Button>
-                      
-                      {selectedPlants[batch.id]?.length > 0 && (
-                        <Button 
-                          variant="contained" 
-                          color="error"
-                          onClick={() => onOpenDestroyDialog(batch)}
-                          startIcon={<LocalFireDepartmentIcon />}
-                          sx={{ ml: 2 }}
-                        >
-                          {selectedPlants[batch.id].length} Pflanzen vernichten
-                        </Button>
-                      )}
-                    </Box>
-                  )}
-                </Box>
-                
-                {batchPlants[batch.id]?.length > 0 ? (
-                  <>
-                    <TableContainer component={Paper} elevation={1} sx={{ mb: 2 }}>
-                      <Table size="small">
-                        <TableHead>
-                          <TableRow sx={{ backgroundColor: 'primary.main' }}>
-                            <TableCell padding="checkbox" sx={{ color: 'white' }}>
-                              <Checkbox
-                                checked={(selectedPlants[batch.id]?.length || 0) === (batchPlants[batch.id]?.length || 0)}
-                                indeterminate={(selectedPlants[batch.id]?.length || 0) > 0 && 
-                                            (selectedPlants[batch.id]?.length || 0) < (batchPlants[batch.id]?.length || 0)}
-                                onChange={(e) => selectAllPlantsInBatch(batch.id, e.target.checked)}
-                                sx={{
-                                  color: 'white',
-                                  '&.Mui-checked': {
-                                    color: 'white',
-                                  },
-                                  '&.MuiCheckbox-indeterminate': {
-                                    color: 'white',
-                                  }
-                                }}
-                              />
-                            </TableCell>
-                            <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Charge-Nummer</TableCell>
-                            <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>UUID</TableCell>
-                            <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Erstellt am</TableCell>
-                            <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Kultiviert von</TableCell>
-                            <TableCell align="center" sx={{ color: 'white', fontWeight: 'bold' }}>Bewertung</TableCell>
-                            <TableCell align="right" sx={{ color: 'white', fontWeight: 'bold' }}>Aktionen</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {batchPlants[batch.id]?.map((plant, i) => (
-                            <TableRow 
-                              key={plant.id}
-                              sx={{ 
-                                backgroundColor: 'white',
-                                '&:nth-of-type(odd)': { backgroundColor: 'rgba(0, 0, 0, 0.02)' }
-                              }}
-                            >
-                              <TableCell padding="checkbox">
-                                <Checkbox
-                                  checked={selectedPlants[batch.id]?.includes(plant.id) || false}
-                                  onChange={() => togglePlantSelection(batch.id, plant.id)}
-                                />
-                              </TableCell>
-                              <TableCell>
-                                {plant.batch_number || `Pflanze ${i+1} (Nummer nicht verfügbar)`}
-                              </TableCell>
-                              <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
-                                {plant.id}
-                              </TableCell>
-                              <TableCell>
-                                {new Date(plant.created_at).toLocaleString('de-DE')}
-                              </TableCell>
-                              <TableCell>
-                                {batch.member ? 
-                                  (batch.member.display_name || `${batch.member.first_name} ${batch.member.last_name}`) 
-                                  : "-"}
-                              </TableCell>
-                              
-                              {/* NEU: Bewertungs-Spalte */}
-                              <TableCell align="center">
-                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-                                  {/* Anzeige der durchschnittlichen Bewertung */}
-                                  {plant.average_rating && (
-                                    <Typography variant="body2" sx={{ color: 'warning.main' }}>
-                                      ⭐ {plant.average_rating}
-                                    </Typography>
-                                  )}
-                                  
-                                  {/* Bewertungs-Button */}
-                                  <Tooltip title={`Pflanze bewerten (${plant.rating_count || 0} Bewertungen)`}>
-                                    <IconButton 
-                                      size="small" 
-                                      sx={{ 
-                                        color: plant.is_premium_mother ? 'warning.main' : 'action.active',
-                                        '&:hover': {
-                                          backgroundColor: plant.is_premium_mother ? 'warning.light' : 'action.hover'
-                                        }
-                                      }}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        onOpenRatingDialog(batch, plant); // Übergebe beide: batch und plant
-                                      }}
-                                    >
-                                      <Badge badgeContent={plant.rating_count || 0} color="primary" max={99}>
-                                        <StarIcon fontSize="small" />
-                                      </Badge>
-                                    </IconButton>
-                                  </Tooltip>
-                                  
-                                  {/* Premium-Marker */}
-                                  {plant.is_premium_mother && (
-                                    <Tooltip title="Premium Mutterpflanze">
-                                      <Typography variant="caption" sx={{ 
-                                        backgroundColor: 'warning.light',
-                                        color: 'warning.dark',
-                                        px: 1,
-                                        py: 0.5,
-                                        borderRadius: 1,
-                                        fontWeight: 'bold'
-                                      }}>
-                                        PREMIUM
-                                      </Typography>
-                                    </Tooltip>
-                                  )}
-                                </Box>
-                              </TableCell>
-                              
-                              <TableCell align="right">
-                                {/* Button zum Erstellen von Stecklingen */}
-                                <IconButton 
-                                  size="small" 
-                                  sx={{ 
-                                    color: 'white',
-                                    backgroundColor: 'primary.main',
-                                    '&:hover': {
-                                      backgroundColor: 'primary.dark'
-                                    },
-                                    width: '28px',
-                                    height: '28px',
-                                    mr: 1
-                                  }}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onOpenCreateCuttingDialog(batch, plant);
-                                  }}
-                                >
-                                  <ContentCutIcon fontSize="small" />
-                                </IconButton>
-                                
-                                {/* Button zum Vernichten */}
-                                <IconButton 
-                                  size="small" 
-                                  sx={{ 
-                                    color: 'white',
-                                    backgroundColor: 'error.main',
-                                    '&:hover': {
-                                      backgroundColor: 'error.dark'
-                                    },
-                                    width: '28px',
-                                    height: '28px'
-                                  }}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    togglePlantSelection(batch.id, plant.id);
-                                    onOpenDestroyDialog(batch);
-                                  }}
-                                >
-                                  <LocalFireDepartmentIcon fontSize="small" />
-                                </IconButton>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                    
-                    {/* Pagination für die Pflanzen innerhalb eines Batches */}
-                    {plantsTotalPages[batch.id] > 1 && (
-                      <Box display="flex" justifyContent="center" mt={2} width="100%">
-                        <Pagination 
-                          count={plantsTotalPages[batch.id]} 
-                          page={plantsCurrentPage[batch.id] || 1} 
-                          onChange={(e, page) => onPlantsPageChange(batch.id, e, page)}
-                          color="primary"
-                          size="small"
-                        />
-                      </Box>
-                    )}
-                  </>
-                ) : (
-                  <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 2 }}>
-                    Keine aktiven Pflanzen in dieser Charge.
-                  </Typography>
-                )}
-              </Box>
-            ) : (
-              <LoadingIndicator size={24} />
-            )}
-          </>
-        )}
-
         {/* Tab 2: Vernichtete Pflanzen */}
         {tabValue === 2 && (
           <>
@@ -992,7 +1120,7 @@ const MotherPlantTable = ({
             onClick={() => onExpandBatch(batch.id)}
             columns={getRowColumns(batch)}
             borderColor="primary.main"
-            expandIconPosition="end" // Diese Zeile hinzufügen
+            expandIconPosition="start"
           >
             {renderBatchDetails(batch)}
           </AccordionRow>

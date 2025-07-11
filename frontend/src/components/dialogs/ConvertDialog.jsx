@@ -77,8 +77,13 @@ const ConvertDialog = ({
       setMemberId(null)
       setAbortController(null)
       setIsAborting(false)
+      
+      // DIRTY FIX: Für Mutterpflanzen immer quantity auf 1 setzen
+      if (type === 'mother') {
+        setQuantity(1)
+      }
     }
-  }, [open])
+  }, [open, type, setQuantity])
   
   // RFID-Scan starten
   const startRfidScan = async () => {
@@ -219,6 +224,11 @@ const ConvertDialog = ({
   
   // Validierung: Prüft ob alle Felder ausgefüllt sind
   const isFormValid = () => {
+    // Für Mutterpflanzen ist quantity immer 1, daher nur Raum prüfen
+    if (type === 'mother') {
+      return selectedRoomId !== ''
+    }
+    // Für Blühpflanzen normale Validierung
     return quantity > 0 && quantity <= maxQuantity && selectedRoomId
   }
   
@@ -311,7 +321,10 @@ const ConvertDialog = ({
                 </Typography>
                 
                 <Typography variant="body1" align="center" color="white" sx={{ mt: 2 }}>
-                  {quantity} {strainName ? `${strainName} ` : ''}Samen wurde{quantity > 1 ? 'n' : ''} {quantity > 1 ? 'zu' : 'zur'} {quantity > 1 ? (type === 'mother' ? 'Mutterpflanzen' : 'Blühpflanzen') : (type === 'mother' ? 'Mutterpflanze' : 'Blühpflanze')} konvertiert
+                  {type === 'mother' 
+                    ? `Ein ${strainName ? `${strainName} ` : ''}Samen wurde zur Mutterpflanze konvertiert`
+                    : `${quantity} ${strainName ? `${strainName} ` : ''}Samen wurde${quantity > 1 ? 'n' : ''} zu ${quantity > 1 ? 'Blühpflanzen' : 'einer Blühpflanze'} konvertiert`
+                  }
                 </Typography>
                 
                 <Typography variant="h6" align="center" color="white" fontWeight="bold" sx={{ mt: 1 }}>
@@ -354,20 +367,25 @@ const ConvertDialog = ({
       
       <DialogContent>
         <Typography variant="body2" gutterBottom color="text.secondary">
-          Verfügbare Samen: {maxQuantity || 0}
+          {type === 'mother' 
+            ? '✨ Eine Mutterpflanze wird erstellt' 
+            : `Verfügbare Samen: ${maxQuantity || 0}`}
         </Typography>
         
-        <TextField
-          label="Anzahl"
-          type="number"
-          fullWidth
-          margin="normal"
-          value={quantity}
-          onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
-          inputProps={{ min: 1, max: maxQuantity }}
-          required
-          helperText={`Wählen Sie zwischen 1 und ${maxQuantity} Samen`}
-        />
+        {/* Quantity-Field nur für Blühpflanzen anzeigen */}
+        {type !== 'mother' && (
+          <TextField
+            label="Anzahl"
+            type="number"
+            fullWidth
+            margin="normal"
+            value={quantity}
+            onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+            inputProps={{ min: 1, max: maxQuantity }}
+            required
+            helperText={`Wählen Sie zwischen 1 und ${maxQuantity} Samen`}
+          />
+        )}
         
         {/* Raumauswahl */}
         <FormControl 
@@ -424,7 +442,10 @@ const ConvertDialog = ({
           }}
         >
           <Typography variant="body2">
-            <strong>Hinweis:</strong> Die Zuordnung des verantwortlichen Mitglieds erfolgt automatisch per RFID-Autorisierung.
+            <strong>Hinweis:</strong> {type === 'mother' 
+              ? 'Aus jedem Samen kann nur eine Mutterpflanze entstehen. Die Zuordnung erfolgt per RFID.'
+              : 'Die Zuordnung des verantwortlichen Mitglieds erfolgt automatisch per RFID-Autorisierung.'
+            }
           </Typography>
         </Box>
       </DialogContent>

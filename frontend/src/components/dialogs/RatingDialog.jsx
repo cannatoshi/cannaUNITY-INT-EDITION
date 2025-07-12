@@ -1,5 +1,6 @@
 // frontend/src/components/dialogs/RatingDialog.jsx
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { motion, AnimatePresence, useAnimation } from 'framer-motion'
 import {
   Dialog,
   DialogTitle,
@@ -44,6 +45,352 @@ import VisibilityIcon from '@mui/icons-material/Visibility'
 import AddIcon from '@mui/icons-material/Add'
 import api from '@/utils/api'
 
+// Animierter Zähler für die Gesamtbewertung
+const AnimatedCounter = ({ value }) => {
+  const [displayValue, setDisplayValue] = useState(0)
+  const [showFireworks, setShowFireworks] = useState(false)
+  const previousValue = useRef(0)
+  
+  useEffect(() => {
+    const numericValue = parseFloat(value)
+    const startValue = previousValue.current
+    const difference = numericValue - startValue
+    const duration = 600 // ms
+    const steps = 30
+    const stepDuration = duration / steps
+    let currentStep = 0
+    
+    const timer = setInterval(() => {
+      currentStep++
+      if (currentStep === steps) {
+        setDisplayValue(numericValue)
+        previousValue.current = numericValue
+        clearInterval(timer)
+        
+        // Feuerwerk bei 10.0
+        if (numericValue === 10.0) {
+          setShowFireworks(true)
+          setTimeout(() => setShowFireworks(false), 100)
+        }
+      } else {
+        const progress = currentStep / steps
+        const easeOutQuart = 1 - Math.pow(1 - progress, 4)
+        const currentValue = startValue + (difference * easeOutQuart)
+        setDisplayValue(currentValue)
+      }
+    }, stepDuration)
+    
+    return () => clearInterval(timer)
+  }, [value])
+  
+  return (
+    <Box sx={{ position: 'relative' }}>
+      <Typography 
+        variant="h2" 
+        sx={{ 
+          fontWeight: 'bold', 
+          color: '#2e7d32',
+          textShadow: '2px 2px 4px rgba(0,0,0,0.1)'
+        }}
+      >
+        {displayValue.toFixed(1)}
+      </Typography>
+      <FireworksExplosion trigger={showFireworks} />
+    </Box>
+  )
+};
+
+// Konfetti-Komponente für 10/10 Bewertungen (in AnimatedRating)
+const ConfettiExplosion = ({ trigger }) => {
+  const [particles, setParticles] = useState([])
+  
+  useEffect(() => {
+    if (trigger) {
+      const newParticles = Array.from({ length: 30 }, (_, i) => ({
+        id: i,
+        x: Math.random() * 100 - 50,
+        y: Math.random() * 100 - 50,
+        rotation: Math.random() * 360,
+        scale: Math.random() * 0.5 + 0.5,
+        color: ['#2e7d32', '#4caf50', '#66bb6a', '#81c784'][Math.floor(Math.random() * 4)]
+      }))
+      setParticles(newParticles)
+      
+      setTimeout(() => setParticles([]), 2000)
+    }
+  }, [trigger])
+  
+  return (
+    <Box sx={{ position: 'absolute', top: '50%', left: '50%', pointerEvents: 'none', zIndex: 10 }}>
+      <AnimatePresence>
+        {particles.map((particle) => (
+          <motion.div
+            key={particle.id}
+            initial={{ 
+              x: 0, 
+              y: 0, 
+              opacity: 1, 
+              scale: 0,
+              rotate: 0
+            }}
+            animate={{ 
+              x: particle.x * 3, 
+              y: particle.y * 3 - 50, 
+              opacity: 0, 
+              scale: particle.scale,
+              rotate: particle.rotation
+            }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1.5, ease: "easeOut" }}
+            style={{
+              position: 'absolute',
+              width: '10px',
+              height: '10px',
+              backgroundColor: particle.color,
+              borderRadius: '2px'
+            }}
+          />
+        ))}
+      </AnimatePresence>
+    </Box>
+  )
+};
+
+// Feuerwerk-Komponente für perfekte Bewertungen
+const FireworksExplosion = ({ trigger }) => {
+  const [particles, setParticles] = useState([])
+  
+  useEffect(() => {
+    if (trigger) {
+      const colors = ['#2e7d32', '#4caf50', '#66bb6a', '#81c784', '#a5d6a7', '#ffeb3b', '#ffc107']
+      const newParticles = []
+      
+      // Mehrere Explosionen
+      for (let explosion = 0; explosion < 3; explosion++) {
+        const offsetX = (explosion - 1) * 80
+        const offsetY = explosion * -30
+        
+        for (let i = 0; i < 20; i++) {
+          const angle = (i / 20) * Math.PI * 2
+          const velocity = 3 + Math.random() * 2
+          newParticles.push({
+            id: `${explosion}-${i}`,
+            x: offsetX,
+            y: offsetY,
+            vx: Math.cos(angle) * velocity,
+            vy: Math.sin(angle) * velocity,
+            size: 4 + Math.random() * 4,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            delay: explosion * 0.2
+          })
+        }
+      }
+      
+      setParticles(newParticles)
+      setTimeout(() => setParticles([]), 2500)
+    }
+  }, [trigger])
+  
+  return (
+    <Box sx={{ position: 'absolute', top: '50%', left: '50%', pointerEvents: 'none', zIndex: 10 }}>
+      <AnimatePresence>
+        {particles.map((particle) => (
+          <motion.div
+            key={particle.id}
+            initial={{ 
+              x: particle.x, 
+              y: particle.y, 
+              opacity: 1, 
+              scale: 0
+            }}
+            animate={{ 
+              x: particle.x + particle.vx * 50, 
+              y: particle.y + particle.vy * 50 - 30, 
+              opacity: 0, 
+              scale: [0, 1.5, 0]
+            }}
+            transition={{ 
+              duration: 1.5, 
+              ease: "easeOut",
+              delay: particle.delay
+            }}
+            style={{
+              position: 'absolute',
+              width: particle.size + 'px',
+              height: particle.size + 'px',
+              backgroundColor: particle.color,
+              borderRadius: '50%',
+              boxShadow: `0 0 ${particle.size}px ${particle.color}`
+            }}
+          />
+        ))}
+      </AnimatePresence>
+      
+      {/* Zusätzliche Sterne */}
+      <AnimatePresence>
+        {trigger && Array.from({ length: 5 }, (_, i) => (
+          <motion.div
+            key={`star-${i}`}
+            initial={{ 
+              scale: 0, 
+              rotate: 0,
+              x: (i - 2) * 30,
+              y: -50
+            }}
+            animate={{ 
+              scale: [0, 2, 0],
+              rotate: 360,
+              y: -100
+            }}
+            transition={{ 
+              duration: 2, 
+              delay: i * 0.1,
+              ease: "easeOut"
+            }}
+            style={{
+              position: 'absolute',
+              fontSize: '2rem',
+            }}
+          >
+            ⭐
+          </motion.div>
+        ))}
+      </AnimatePresence>
+    </Box>
+  )
+};
+
+// Animierte Rating-Komponente mit konsistenter Größe
+const AnimatedRating = ({ value, onChange, max = 10, readOnly = false, label, fullWidth = false }) => {
+  const [hoverValue, setHoverValue] = useState(-1)
+  const [isAnimating, setIsAnimating] = useState(false)
+  const [showConfetti, setShowConfetti] = useState(false)
+  const controls = useAnimation()
+
+  const handleChange = (event, newValue) => {
+    if (!readOnly) {
+      setIsAnimating(true)
+      onChange(event, newValue)
+      
+      // Spektakulärer Puls-Effekt
+      controls.start({
+        scale: [1, 1.2, 0.9, 1.1, 1],
+        transition: { duration: 0.5, ease: "easeInOut" }
+      })
+      
+      // Konfetti bei 10/10
+      if (newValue === max) {
+        setShowConfetti(true)
+        setTimeout(() => setShowConfetti(false), 100)
+      }
+      
+      setTimeout(() => setIsAnimating(false), 500)
+    }
+  }
+
+  return (
+    <Box sx={{ 
+      display: 'flex', 
+      alignItems: 'center', 
+      justifyContent: 'space-between',
+      width: '100%',
+      position: 'relative'
+    }}>
+      <Box sx={{ 
+        flex: 1,
+        display: 'flex',
+        alignItems: 'center',
+        position: 'relative'
+      }}>
+        <Box sx={{ 
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: isAnimating ? '150%' : '0%',
+            height: isAnimating ? '150%' : '0%',
+            background: 'radial-gradient(circle, rgba(46, 125, 50, 0.3) 0%, rgba(46, 125, 50, 0.1) 40%, transparent 70%)',
+            borderRadius: '50%',
+            transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+            pointerEvents: 'none',
+            zIndex: 0
+          }
+        }}>
+          <motion.div animate={controls}>
+            <Rating
+              value={value}
+              onChange={handleChange}
+              onChangeActive={(event, newHover) => setHoverValue(newHover)}
+              max={max}
+              size="large"
+              readOnly={readOnly}
+              sx={{
+                fontSize: '2rem',
+                position: 'relative',
+                zIndex: 1,
+                '& .MuiRating-icon': {
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    transform: 'scale(1.2) translateY(-2px)',
+                  }
+                },
+                '& .MuiRating-iconFilled': {
+                  color: '#2e7d32',
+                  filter: value >= 8 ? 'drop-shadow(0 0 4px rgba(46, 125, 50, 0.5))' : 'none',
+                  '&:hover': {
+                    filter: 'brightness(1.3) drop-shadow(0 0 6px rgba(46, 125, 50, 0.7))',
+                  }
+                },
+                '& .MuiRating-iconEmpty': {
+                  color: 'rgba(46, 125, 50, 0.3)',
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    color: 'rgba(46, 125, 50, 0.5)',
+                  }
+                }
+              }}
+            />
+          </motion.div>
+          
+          <ConfettiExplosion trigger={showConfetti} />
+        </Box>
+      </Box>
+      
+      {/* Wert-Anzeige rechts ausgerichtet */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={value}
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 10 }}
+          transition={{ duration: 0.2 }}
+          style={{ marginLeft: '16px' }}
+        >
+          <Typography 
+            variant="h5" 
+            sx={{ 
+              minWidth: '90px',
+              color: '#2e7d32',
+              fontWeight: '600',
+              textAlign: 'right'
+            }}
+          >
+            {hoverValue > -1 ? hoverValue : value}/{max}
+          </Typography>
+        </motion.div>
+      </AnimatePresence>
+    </Box>
+  )
+};
+
+// Animierter Button
+const AnimatedButton = motion(Button);
+
 const RatingDialog = ({ 
   open, 
   onClose, 
@@ -77,8 +424,8 @@ const RatingDialog = ({
   const [ratingHistory, setRatingHistory] = useState([])
   const [loadingHistory, setLoadingHistory] = useState(false)
   
-  // NEU: States für Historie-Ansicht
-  const [viewMode, setViewMode] = useState('new') // 'new' oder 'history'
+  // States für Historie-Ansicht
+  const [viewMode, setViewMode] = useState('new')
   const [selectedHistoryId, setSelectedHistoryId] = useState(null)
   const [isReadOnly, setIsReadOnly] = useState(false)
 
@@ -97,7 +444,7 @@ const RatingDialog = ({
     }
   }
 
-  // NEU: Funktion zum Laden einer historischen Bewertung
+  // Funktion zum Laden einer historischen Bewertung
   const loadHistoricRating = (rating) => {
     setOverallHealth(rating.overall_health || 5)
     setGrowthStructure(rating.growth_structure || 5)
@@ -116,7 +463,7 @@ const RatingDialog = ({
     setIsReadOnly(true)
   }
 
-  // NEU: Funktion zum Zurücksetzen auf neue Bewertung
+  // Funktion zum Zurücksetzen auf neue Bewertung
   const resetToNewRating = () => {
     setOverallHealth(5)
     setGrowthStructure(5)
@@ -138,18 +485,13 @@ const RatingDialog = ({
   // Dialog zurücksetzen beim Öffnen
   useEffect(() => {
     if (open && plant) {
-      // Auf neue Bewertung zurücksetzen
       resetToNewRating()
-      
-      // RFID-States zurücksetzen
       setScanMode(false)
       setScanSuccess(false)
       setScannedMemberName('')
       setMemberId(null)
       setAbortController(null)
       setIsAborting(false)
-      
-      // Historie laden
       loadRatingHistory()
     }
   }, [open, plant])
@@ -172,7 +514,6 @@ const RatingDialog = ({
     try {
       console.log("🚀 Starte RFID-Scan für Bewertung...")
       
-      // 1. Karte scannen
       const bindRes = await api.get('/unifi_api_debug/bind-rfid-session/', {
         signal: controller.signal
       })
@@ -185,7 +526,6 @@ const RatingDialog = ({
         throw new Error('RFID-Zuweisung fehlgeschlagen.')
       }
       
-      // 2. Mitglied validieren
       const verifyRes = await api.post('/unifi_api_debug/secure-member-binding/', 
         { token, unifi_name }, 
         { signal: controller.signal }
@@ -193,16 +533,12 @@ const RatingDialog = ({
       
       const { member_id, member_name } = verifyRes.data
       
-      // Erfolg setzen
       setMemberId(member_id)
       setScannedMemberName(member_name)
       setScanSuccess(true)
       
-      // Bewertung speichern
       setTimeout(async () => {
         await handleSaveRating(member_id)
-        
-        // Nach 2 Sekunden schließen
         setTimeout(() => {
           handleDialogClose()
         }, 2000)
@@ -304,7 +640,7 @@ const RatingDialog = ({
     return (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1)
   }
 
-  // Formatiere Regrowth Speed für Anzeige
+  // Formatiere Regrowth Speed
   const formatRegrowthSpeed = (speed) => {
     const speedMap = {
       'very_fast': 'Sehr schnell',
@@ -431,53 +767,64 @@ const RatingDialog = ({
         color: 'white',
         px: 3,
         height: '70px',
-        borderBottom: '2px solid #2e7d32'
+        borderBottom: '2px solid #2e7d32',
+        overflow: 'hidden'
       }}>
-        <LocalHospitalIcon sx={{ mr: 2, fontSize: 32 }} />
-        <Typography variant="h4" sx={{ fontWeight: 300 }}>
-          Mutterpflanzenbewertung
-        </Typography>
-        <Box sx={{ ml: 'auto', display: 'flex', gap: 3 }}>
-          <Typography variant="h6">ID: {plant.batch_number}</Typography>
-          <Typography variant="h6">Genetik: {batch?.seed_strain || 'N/A'}</Typography>
-          <Typography variant="h6">Datum: {new Date().toLocaleDateString('de-DE')}</Typography>
+        <motion.div
+          initial={{ x: -300, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ duration: 0.6, type: "spring", stiffness: 100 }}
+          style={{ display: 'flex', alignItems: 'center' }}
+        >
+          <LocalHospitalIcon sx={{ mr: 2, fontSize: 32 }} />
+          <Typography variant="h4" sx={{ fontWeight: 300 }}>
+            Mutterpflanzenbewertung {viewMode === 'history' && '(Historie)'}
+          </Typography>
+        </motion.div>
+        <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center',
+            px: 2,
+            py: 1,
+            borderRadius: 1,
+            bgcolor: 'rgba(255,255,255,0.1)'
+          }}>
+            <Typography variant="body1" sx={{ fontWeight: 500 }}>ID:</Typography>
+            <Typography variant="h6" sx={{ ml: 1 }}>{plant.batch_number}</Typography>
+          </Box>
+          <Divider orientation="vertical" flexItem sx={{ bgcolor: 'rgba(255,255,255,0.3)' }} />
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center',
+            px: 2,
+            py: 1,
+            borderRadius: 1,
+            bgcolor: 'rgba(255,255,255,0.1)'
+          }}>
+            <Typography variant="body1" sx={{ fontWeight: 500 }}>Genetik:</Typography>
+            <Typography variant="h6" sx={{ ml: 1 }}>{batch?.seed_strain || 'N/A'}</Typography>
+          </Box>
+          <Divider orientation="vertical" flexItem sx={{ bgcolor: 'rgba(255,255,255,0.3)' }} />
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center',
+            px: 2,
+            py: 1,
+            borderRadius: 1,
+            bgcolor: 'rgba(255,255,255,0.1)'
+          }}>
+            <Typography variant="h6">{new Date().toLocaleDateString('de-DE')}</Typography>
+          </Box>
         </Box>
       </Box>
-
-      {/* NEU: Status-Bar für Ansichtsmodus */}
-      {viewMode === 'history' && (
-        <Alert 
-          severity="info" 
-          sx={{ 
-            borderRadius: 0,
-            '& .MuiAlert-icon': { fontSize: 28 }
-          }}
-          action={
-            <Button 
-              color="inherit" 
-              size="small"
-              startIcon={<AddIcon />}
-              onClick={resetToNewRating}
-              sx={{ fontWeight: 'bold' }}
-            >
-              Neue Bewertung erstellen
-            </Button>
-          }
-        >
-          <Typography variant="body1">
-            <strong>Historische Bewertung vom {selectedHistoryId && ratingHistory.find(r => r.id === selectedHistoryId) ? 
-              new Date(ratingHistory.find(r => r.id === selectedHistoryId).created_at).toLocaleDateString('de-DE') : 
-              'N/A'}</strong> - Nur Ansicht
-          </Typography>
-        </Alert>
-      )}
 
       {/* Content */}
       <Box sx={{ 
         p: 3, 
         display: 'flex',
         gap: 3,
-        height: viewMode === 'history' ? 'calc(100vh - 70px - 80px - 52px)' : 'calc(100vh - 70px - 80px)',
+        height: 'calc(100vh - 70px - 80px)',
         overflow: 'auto'
       }}>
         {/* Hauptbereich - 3 Spalten */}
@@ -493,7 +840,7 @@ const RatingDialog = ({
           width: '100%'
         }}>
           {/* Spalte 1: Gesundheitsbewertung */}
-          <Card sx={{ bgcolor: 'white', boxShadow: 2, opacity: isReadOnly ? 0.95 : 1 }}>
+          <Card sx={{ bgcolor: 'white', boxShadow: 2, opacity: isReadOnly ? 0.95 : 1, height: '100%' }}>
             <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                 <ScienceIcon sx={{ mr: 1.5, fontSize: 28, color: '#2e7d32' }} />
@@ -508,15 +855,13 @@ const RatingDialog = ({
                   <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 500 }}>
                     Allgemeine Pflanzengesundheit
                   </Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                    <Rating
+                  <Box sx={{ mb: 1 }}>
+                    <AnimatedRating
                       value={overallHealth}
-                      onChange={(e, value) => !isReadOnly && setOverallHealth(value)}
+                      onChange={(e, value) => setOverallHealth(value)}
                       max={10}
-                      size="large"
                       readOnly={isReadOnly}
                     />
-                    <Typography variant="h6" sx={{ minWidth: '50px' }}>{overallHealth}/10</Typography>
                   </Box>
                   <TextField
                     fullWidth
@@ -536,15 +881,13 @@ const RatingDialog = ({
                   <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 500 }}>
                     Wuchsstruktur und Verzweigung
                   </Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                    <Rating
+                  <Box sx={{ mb: 1 }}>
+                    <AnimatedRating
                       value={growthStructure}
-                      onChange={(e, value) => !isReadOnly && setGrowthStructure(value)}
+                      onChange={(e, value) => setGrowthStructure(value)}
                       max={10}
-                      size="large"
                       readOnly={isReadOnly}
                     />
-                    <Typography variant="h6" sx={{ minWidth: '50px' }}>{growthStructure}/10</Typography>
                   </Box>
                   <TextField
                     fullWidth
@@ -564,15 +907,13 @@ const RatingDialog = ({
                   <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 500 }}>
                     Regenerationsfähigkeit nach Schnitt
                   </Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                    <Rating
+                  <Box sx={{ mb: 1 }}>
+                    <AnimatedRating
                       value={regenerationAbility}
-                      onChange={(e, value) => !isReadOnly && setRegenerationAbility(value)}
+                      onChange={(e, value) => setRegenerationAbility(value)}
                       max={10}
-                      size="large"
                       readOnly={isReadOnly}
                     />
-                    <Typography variant="h6" sx={{ minWidth: '50px' }}>{regenerationAbility}/10</Typography>
                   </Box>
                   <TextField
                     fullWidth
@@ -591,7 +932,7 @@ const RatingDialog = ({
           </Card>
 
           {/* Spalte 2: Produktionsdaten */}
-          <Card sx={{ bgcolor: 'white', boxShadow: 2, opacity: isReadOnly ? 0.95 : 1 }}>
+          <Card sx={{ bgcolor: 'white', boxShadow: 2, opacity: isReadOnly ? 0.95 : 1, height: '100%' }}>
             <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                 <NatureIcon sx={{ mr: 1.5, fontSize: 28, color: '#388e3c' }} />
@@ -601,14 +942,25 @@ const RatingDialog = ({
               </Box>
 
               <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3 }}>
-                {/* Nachwachsgeschwindigkeit */}
+                {/* Nachwachsgeschwindigkeit - oben wie bei Karte 1 */}
                 <Box>
+                  <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 500 }}>
+                    Nachwachsgeschwindigkeit
+                  </Typography>
+                  <Box sx={{ mb: 1 }}>
+                    <AnimatedRating
+                      value={regrowthSpeedRating}
+                      onChange={(e, value) => setRegrowthSpeedRating(value)}
+                      max={10}
+                      readOnly={isReadOnly}
+                    />
+                  </Box>
                   <FormControl fullWidth disabled={isReadOnly}>
-                    <InputLabel>Nachwachsgeschwindigkeit</InputLabel>
+                    <InputLabel>Geschwindigkeit auswählen</InputLabel>
                     <Select
                       value={regrowthSpeed}
                       onChange={(e) => !isReadOnly && setRegrowthSpeed(e.target.value)}
-                      label="Nachwachsgeschwindigkeit"
+                      label="Geschwindigkeit auswählen"
                     >
                       <MenuItem value="very_fast">Sehr schnell (&lt; 7 Tage)</MenuItem>
                       <MenuItem value="fast">Schnell (7-14 Tage)</MenuItem>
@@ -616,69 +968,41 @@ const RatingDialog = ({
                       <MenuItem value="slow">Langsam (&gt; 21 Tage)</MenuItem>
                     </Select>
                   </FormControl>
-                  <Box sx={{ mt: 2 }}>
-                    <Typography variant="subtitle2" sx={{ mb: 1 }}>Bewertung</Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Rating
-                        value={regrowthSpeedRating}
-                        onChange={(e, value) => !isReadOnly && setRegrowthSpeedRating(value)}
-                        max={10}
-                        size="medium"
-                        readOnly={isReadOnly}
-                      />
-                      <Typography variant="body1">{regrowthSpeedRating}/10</Typography>
-                    </Box>
-                  </Box>
                 </Box>
 
-                <Divider />
-
-                {/* Erntedaten */}
-                <Box>
-                  <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 500 }}>
-                    Erntedaten
-                  </Typography>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12}>
-                      <TextField
-                        fullWidth
-                        label="Anzahl geernteter Stecklinge"
-                        type="number"
-                        value={cuttingsHarvested}
-                        onChange={(e) => !isReadOnly && setCuttingsHarvested(parseInt(e.target.value) || 0)}
-                        inputProps={{ min: 0, readOnly: isReadOnly }}
-                      />
-                    </Grid>
-                    <Grid item xs={12}>
-                      <TextField
-                        fullWidth
-                        label="Bewurzelungs-Erfolgsquote (%)"
-                        type="number"
-                        value={rootingSuccessRate || ''}
-                        onChange={(e) => !isReadOnly && setRootingSuccessRate(e.target.value ? parseFloat(e.target.value) : null)}
-                        inputProps={{ min: 0, max: 100, step: 0.1, readOnly: isReadOnly }}
-                        helperText="Optional - Prozentuale Erfolgsquote"
-                      />
-                    </Grid>
-                  </Grid>
-                </Box>
-
-                <Divider />
-
-                {/* Qualität */}
+                {/* Qualität der Stecklinge */}
                 <Box>
                   <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 500 }}>
                     Qualität der Stecklinge
                   </Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Rating
+                  <Box sx={{ mb: 1 }}>
+                    <AnimatedRating
                       value={cuttingQuality}
-                      onChange={(e, value) => !isReadOnly && setCuttingQuality(value)}
+                      onChange={(e, value) => setCuttingQuality(value)}
                       max={10}
-                      size="large"
                       readOnly={isReadOnly}
                     />
-                    <Typography variant="h6">{cuttingQuality}/10</Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', gap: 2 }}>
+                    <TextField
+                      fullWidth
+                      label="Anzahl geernteter Stecklinge"
+                      type="number"
+                      value={cuttingsHarvested}
+                      onChange={(e) => !isReadOnly && setCuttingsHarvested(parseInt(e.target.value) || 0)}
+                      inputProps={{ min: 0, readOnly: isReadOnly }}
+                      sx={{ flex: 1 }}
+                    />
+                    <TextField
+                      fullWidth
+                      label="Erfolgsquote (%)"
+                      type="number"
+                      value={rootingSuccessRate || ''}
+                      onChange={(e) => !isReadOnly && setRootingSuccessRate(e.target.value ? parseFloat(e.target.value) : null)}
+                      inputProps={{ min: 0, max: 100, step: 0.1, readOnly: isReadOnly }}
+                      helperText="Optional"
+                      sx={{ flex: 1 }}
+                    />
                   </Box>
                 </Box>
 
@@ -686,26 +1010,51 @@ const RatingDialog = ({
                 <Box sx={{ 
                   mt: 'auto',
                   p: 3, 
-                  bgcolor: isReadOnly ? '#e8f5e9' : '#ecf5f0ff',
+                  bgcolor: isReadOnly ? '#f5f5f5' : '#f8f9fa',
                   borderRadius: 2,
-                  textAlign: 'center'
+                  textAlign: 'center',
+                  border: '1px solid #e0e0e0',
+                  position: 'relative'
                 }}>
                   <Typography variant="h6" sx={{ color: '#2e7d32', mb: 1 }}>
                     {isReadOnly ? 'Historische Gesamtbewertung' : 'Gesamtbewertung'}
                   </Typography>
-                  <Typography variant="h2" sx={{ fontWeight: 'bold', color: '#2e7d32' }}>
-                    {calculateOverallScore()}
-                  </Typography>
-                  <Typography variant="subtitle1" sx={{ color: '#2e7d32' }}>
+                  <AnimatedCounter value={calculateOverallScore()} />
+                  <Typography variant="subtitle1" sx={{ color: '#666' }}>
                     von 10.0
                   </Typography>
+                  
+                  {calculateOverallScore() >= 9 && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: 0.3, type: "spring" }}
+                      style={{
+                        position: 'absolute',
+                        top: -10,
+                        right: -10,
+                        background: '#4caf50',
+                        color: 'white',
+                        borderRadius: '50%',
+                        width: 40,
+                        height: 40,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '1.5rem',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+                      }}
+                    >
+                      ⭐
+                    </motion.div>
+                  )}
                 </Box>
               </Box>
             </CardContent>
           </Card>
 
           {/* Spalte 3: Historie */}
-          <Card sx={{ bgcolor: 'white', boxShadow: 2 }}>
+          <Card sx={{ bgcolor: 'white', boxShadow: 2, height: '100%' }}>
             <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                 <HistoryIcon sx={{ mr: 1.5, fontSize: 28, color: '#2e7d32' }} />
@@ -752,7 +1101,6 @@ const RatingDialog = ({
                     },
                   }}>
                     {ratingHistory.map((rating, index) => {
-                      // Berechne die Gesamtbewertung für historische Einträge
                       const historicalScore = rating.overall_score || (
                         (rating.overall_health + rating.growth_structure + rating.regeneration_ability + 
                          rating.regrowth_speed_rating + rating.cutting_quality) / 5
@@ -770,8 +1118,8 @@ const RatingDialog = ({
                               cursor: 'pointer',
                               transition: 'all 0.2s',
                               '&:hover': {
-                                boxShadow: 2,
-                                borderColor: selectedHistoryId === rating.id ? '#2e7d32' : '#bdbdbd'
+                                boxShadow: 3,
+                                borderColor: selectedHistoryId === rating.id ? '#2e7d32' : '#999'
                               }
                             }}
                             onClick={() => loadHistoricRating(rating)}
@@ -945,21 +1293,24 @@ const RatingDialog = ({
         alignItems: 'center',
         height: '80px'
       }}>
-        <Button 
+        <AnimatedButton
           onClick={handleDialogClose} 
           variant="outlined"
           size="large"
           sx={{ minWidth: '150px', height: '50px' }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          transition={{ type: "spring", stiffness: 400, damping: 15 }}
         >
           Abbrechen
-        </Button>
+        </AnimatedButton>
         
         <Typography variant="body2" color="text.secondary">
           cannaUNITY Cannabis Qualitätssicherung
         </Typography>
 
         {isReadOnly ? (
-          <Button 
+          <AnimatedButton
             onClick={resetToNewRating}
             variant="contained"
             size="large"
@@ -972,11 +1323,14 @@ const RatingDialog = ({
                 bgcolor: '#165719ff'
               }
             }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 400, damping: 15 }}
           >
             Neue Bewertung erstellen
-          </Button>
+          </AnimatedButton>
         ) : (
-          <Button 
+          <AnimatedButton
             onClick={startRfidScan}
             variant="contained"
             size="large"
@@ -990,13 +1344,16 @@ const RatingDialog = ({
                 bgcolor: '#165719ff'
               }
             }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 400, damping: 15 }}
           >
             Mit RFID autorisieren & speichern
-          </Button>
+          </AnimatedButton>
         )}
       </Box>
     </Dialog>
   )
-}
+};
 
-export default RatingDialog
+export default RatingDialog;

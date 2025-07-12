@@ -7,6 +7,7 @@ import {
   Select, MenuItem, InputLabel, FormControl
 } from '@mui/material';
 import UnifiDeviceSelector from '@/components/UnifiDeviceSelector';
+import ProtectSensorSelector from '@/components/ProtectSensorSelector';
 
 const RoomForm = ({ initialData, onSubmit, isLoading }) => {
   const [formData, setFormData] = useState({
@@ -20,7 +21,8 @@ const RoomForm = ({ initialData, onSubmit, isLoading }) => {
     width: 500,   // 5m default
     height: 250,  // 2.5m default
     grid_size: 10, // 10cm default
-    unifi_device_id: ''
+    unifi_device_id: '',
+    protect_sensors: []
   });
   
   useEffect(() => {
@@ -36,7 +38,8 @@ const RoomForm = ({ initialData, onSubmit, isLoading }) => {
         width: initialData.width || 500,
         height: initialData.height || 250,
         grid_size: initialData.grid_size || 10,
-        unifi_device_id: initialData.unifi_device_id || ''
+        unifi_device_id: initialData.unifi_device_id || '',
+        protect_sensors: initialData.protect_sensors || []
       });
     }
   }, [initialData]);
@@ -66,7 +69,8 @@ const RoomForm = ({ initialData, onSubmit, isLoading }) => {
       width: parseInt(formData.width, 10),
       height: parseInt(formData.height, 10),
       grid_size: parseInt(formData.grid_size, 10),
-      unifi_device_id: formData.unifi_device_id || null
+      unifi_device_id: formData.unifi_device_id || null,
+      protect_sensors: formData.protect_sensors
     });
   };
   
@@ -109,6 +113,12 @@ const RoomForm = ({ initialData, onSubmit, isLoading }) => {
           <UnifiDeviceSelector
             value={formData.unifi_device_id}
             onChange={(deviceId) => setFormData({ ...formData, unifi_device_id: deviceId })}
+            currentRoomId={initialData?.id}
+          />
+
+          <ProtectSensorSelector
+            value={formData.protect_sensors}
+            onChange={(sensorIds) => setFormData({ ...formData, protect_sensors: sensorIds })}
             currentRoomId={initialData?.id}
           />
           

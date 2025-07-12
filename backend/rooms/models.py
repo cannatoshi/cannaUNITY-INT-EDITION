@@ -38,6 +38,13 @@ class Room(models.Model):
         help_text="UniFi Access Device ID für Türzugang"
     )
 
+    protect_sensors = models.ManyToManyField(
+        'unifi_protect.ProtectSensor',
+        blank=True,
+        related_name='rooms',
+        help_text="UniFi Protect Sensoren in diesem Raum"
+    )
+
     def __str__(self):
         return self.name
     

@@ -1,5 +1,5 @@
 // frontend/src/apps/rooms/components/RoomTable.jsx
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Box, Typography, Button, IconButton, Tooltip,
   TableContainer, TableHead, TableRow, TableCell, TableBody,
@@ -11,11 +11,13 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import TableChartIcon from '@mui/icons-material/TableChart';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ThermostatIcon from '@mui/icons-material/Thermostat';
 
 import AccordionRow from '@/components/common/AccordionRow';
 import TableHeader from '@/components/common/TableHeader';
 import PaginationFooter from '@/components/common/PaginationFooter';
 import DetailCards from '@/components/common/DetailCards';
+import SensorDataModal from '@/components/SensorDataModal';
 
 /**
  * RoomTable Komponente für die Darstellung der Raumliste mit Details
@@ -28,6 +30,10 @@ const RoomTable = ({
   totalPages,
   onPageChange
 }) => {
+  // State für Sensor Modal
+  const [sensorModalOpen, setSensorModalOpen] = useState(false);
+  const [selectedRoom, setSelectedRoom] = useState(null);
+
   // Spalten für den Tabellenkopf definieren
   const headerColumns = [
     { label: '', width: '3%', align: 'center' },
@@ -164,6 +170,28 @@ const RoomTable = ({
                 <VisibilityIcon fontSize="small" />
               </IconButton>
             </Tooltip>
+            {room.protect_sensors_info && room.protect_sensors_info.length > 0 && (
+              <Tooltip title="Sensordaten anzeigen">
+                <IconButton 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedRoom(room);
+                    setSensorModalOpen(true);
+                  }}
+                  size="small"
+                  sx={{ 
+                    color: 'white',
+                    backgroundColor: 'warning.main',
+                    '&:hover': { backgroundColor: 'warning.dark' },
+                    width: '28px',
+                    height: '28px',
+                    mr: 0.5
+                  }}
+                >
+                  <ThermostatIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
             <Tooltip title="Raumdesigner öffnen">
               <IconButton 
                 component={Link} 
@@ -291,6 +319,16 @@ const RoomTable = ({
                       {room.pflanzenanzahl}
                     </Typography>
                   </Box>
+                  {room.protect_sensors_info && room.protect_sensors_info.length > 0 && (
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'rgba(0, 0, 0, 0.6)' }}>
+                        Sensoren:
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: 'rgba(0, 0, 0, 0.87)' }}>
+                        {room.protect_sensors_info.length} aktiv
+                      </Typography>
+                    </Box>
+                  )}
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                     <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'rgba(0, 0, 0, 0.6)' }}>
                       Erstellt am:
@@ -409,6 +447,19 @@ const RoomTable = ({
           >
             Details anzeigen
           </Button>
+          {room.protect_sensors_info && room.protect_sensors_info.length > 0 && (
+            <Button 
+              variant="contained" 
+              color="warning" 
+              onClick={() => {
+                setSelectedRoom(room);
+                setSensorModalOpen(true);
+              }}
+              startIcon={<ThermostatIcon />}
+            >
+              Sensordaten anzeigen
+            </Button>
+          )}
           <Button 
             variant="contained" 
             color="primary" 
@@ -479,6 +530,17 @@ const RoomTable = ({
         hasData={data && data.length > 0}
         emptyMessage="Keine Räume vorhanden"
         color="primary"
+      />
+
+      {/* Sensor Data Modal */}
+      <SensorDataModal
+        open={sensorModalOpen}
+        onClose={() => {
+          setSensorModalOpen(false);
+          setSelectedRoom(null);
+        }}
+        roomId={selectedRoom?.id}
+        roomName={selectedRoom?.name}
       />
     </Box>
   );

@@ -7,6 +7,7 @@ from .api_views import (
     BindRfidSessionView,
     SecureMemberBindingView,
     CancelRfidSessionView,
+    UnifiDevicesView,
 )
 
 urlpatterns = [
@@ -15,5 +16,6 @@ urlpatterns = [
     path('bind-rfid-session/', BindRfidSessionView.as_view(), name='bind-rfid-session'),
     path('secure-member-binding/', SecureMemberBindingView.as_view(), name='secure-member-binding'),
     path('cancel-rfid-session/', CancelRfidSessionView.as_view(), name='cancel-rfid-session'),
+    path('devices/', UnifiDevicesView.as_view(), name='unifi-devices'),
 
 ]

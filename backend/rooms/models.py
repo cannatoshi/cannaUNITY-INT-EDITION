@@ -30,6 +30,14 @@ class Room(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    unifi_device_id = models.CharField(
+        max_length=255, 
+        blank=True, 
+        null=True,
+        unique=True,  # WICHTIG: Nur ein Raum pro Device!
+        help_text="UniFi Access Device ID für Türzugang"
+    )
+
     def __str__(self):
         return self.name
     

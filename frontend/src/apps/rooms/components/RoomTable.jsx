@@ -33,7 +33,7 @@ const RoomTable = ({
     { label: '', width: '3%', align: 'center' },
     { label: 'Name', width: '13%', align: 'left' },
     { label: 'Raumtyp', width: '10%', align: 'left' },
-    { label: 'Beschreibung', width: '16%', align: 'left' },
+    { label: 'UniFi Access', width: '16%', align: 'left' },
     { label: 'Größe', width: '10%', align: 'center' },
     { label: 'Fläche (m²)', width: '8%', align: 'center' },
     { label: 'Volumen (m³)', width: '8%', align: 'center' },
@@ -84,7 +84,21 @@ const RoomTable = ({
         width: '10%'
       },
       {
-        content: room.description || 'Keine Beschreibung vorhanden',
+        content: (() => {
+          if (room.unifi_device_info) {
+            return (
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  {room.unifi_device_info.alias || room.unifi_device_info.name}
+                </Typography>
+                <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary' }}>
+                  ({room.unifi_device_id})
+                </Typography>
+              </Box>
+            );
+          }
+          return <Typography variant="caption" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>Kein Device</Typography>;
+        })(),
         width: '16%'
       },
       {

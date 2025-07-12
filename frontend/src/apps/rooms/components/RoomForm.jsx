@@ -6,6 +6,7 @@ import {
   Typography, Paper, Slider, Divider, Grid, 
   Select, MenuItem, InputLabel, FormControl
 } from '@mui/material';
+import UnifiDeviceSelector from '@/components/UnifiDeviceSelector';
 
 const RoomForm = ({ initialData, onSubmit, isLoading }) => {
   const [formData, setFormData] = useState({
@@ -18,7 +19,8 @@ const RoomForm = ({ initialData, onSubmit, isLoading }) => {
     length: 500,  // 5m default
     width: 500,   // 5m default
     height: 250,  // 2.5m default
-    grid_size: 10 // 10cm default
+    grid_size: 10, // 10cm default
+    unifi_device_id: ''
   });
   
   useEffect(() => {
@@ -33,7 +35,8 @@ const RoomForm = ({ initialData, onSubmit, isLoading }) => {
         length: initialData.length || 500,
         width: initialData.width || 500,
         height: initialData.height || 250,
-        grid_size: initialData.grid_size || 10
+        grid_size: initialData.grid_size || 10,
+        unifi_device_id: initialData.unifi_device_id || ''
       });
     }
   }, [initialData]);
@@ -62,7 +65,8 @@ const RoomForm = ({ initialData, onSubmit, isLoading }) => {
       length: parseInt(formData.length, 10),
       width: parseInt(formData.width, 10),
       height: parseInt(formData.height, 10),
-      grid_size: parseInt(formData.grid_size, 10)
+      grid_size: parseInt(formData.grid_size, 10),
+      unifi_device_id: formData.unifi_device_id || null
     });
   };
   
@@ -101,6 +105,12 @@ const RoomForm = ({ initialData, onSubmit, isLoading }) => {
               <MenuItem value="other">Sonstiges</MenuItem>
             </Select>
           </FormControl>
+
+          <UnifiDeviceSelector
+            value={formData.unifi_device_id}
+            onChange={(deviceId) => setFormData({ ...formData, unifi_device_id: deviceId })}
+            currentRoomId={initialData?.id}
+          />
           
           <TextField
             label="Beschreibung"

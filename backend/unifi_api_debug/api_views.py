@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import ReadOnlyModelViewSet
 from rest_framework.generics import ListAPIView
 from django.conf import settings
+from .services import UnifiAccessService
 from django.utils.timezone import now
 from rest_framework import status
 from .models import NfcDebugLog
@@ -190,3 +191,35 @@ class CancelRfidSessionView(APIView):
                 "success": False, 
                 "message": f"Fehler beim Abbrechen der Session: {str(e)}"
             }, status=500)
+        
+
+class UnifiDevicesView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        """Listet alle verfügbaren UniFi Access Devices mit Zuordnungsstatus"""
+        service = UnifiAccessService()
+        devices = service.get_devices()
+        assignments = service.get_device_assignments()
+        
+        # Formatiere für Frontend mit Zuordnungsstatus
+        formatted_devices = []
+        for device in devices:
+            device_id = device.get("id")
+            device_data = {
+                "id": device_id,
+                "name": device.get("name", "Unbekanntes Gerät"),
+                "type": device.get("type", "unknown"),
+                "alias": device.get("alias", ""),
+                "location_id": device.get("location_id", ""),
+                "connected_uah_id": device.get("connected_uah_id", ""),
+                "is_assigned": device_id in assignments,
+                "assigned_to": assignments.get(device_id) if device_id in assignments else None
+            }
+            formatted_devices.append(device_data)
+        
+        return Response({
+            "success": True,
+            "devices": formatted_devices,
+            "count": len(formatted_devices)
+        })

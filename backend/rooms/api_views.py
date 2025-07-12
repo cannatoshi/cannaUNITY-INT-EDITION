@@ -1,6 +1,7 @@
 # backend/rooms/api_views.py
 
-from rest_framework import viewsets
+from rest_framework import viewsets, status
+from rest_framework.response import Response
 from .models import Room, RoomItemType, RoomItem, Sensor
 from .serializers import (RoomSerializer, RoomDetailSerializer, 
                          RoomItemTypeSerializer, RoomItemSerializer, 
@@ -17,6 +18,42 @@ class RoomViewSet(viewsets.ModelViewSet):
         if self.action == 'retrieve':
             return RoomDetailSerializer
         return RoomSerializer
+    
+    def create(self, request, *args, **kwargs):
+        # Prüfe Device-Zuordnung
+        device_id = request.data.get('unifi_device_id')
+        if device_id:
+            existing_room = Room.objects.filter(unifi_device_id=device_id).first()
+            if existing_room:
+                return Response({
+                    'error': f'Device ist bereits Raum "{existing_room.name}" zugeordnet!',
+                    'existing_room': {
+                        'id': existing_room.id,
+                        'name': existing_room.name
+                    }
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        return super().create(request, *args, **kwargs)
+    
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        device_id = request.data.get('unifi_device_id')
+        
+        if device_id and device_id != instance.unifi_device_id:
+            existing_room = Room.objects.filter(
+                unifi_device_id=device_id
+            ).exclude(id=instance.id).first()
+            
+            if existing_room:
+                return Response({
+                    'error': f'Device ist bereits Raum "{existing_room.name}" zugeordnet!',
+                    'existing_room': {
+                        'id': existing_room.id,
+                        'name': existing_room.name
+                    }
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        return super().update(request, *args, **kwargs)
 
 class RoomItemTypeViewSet(viewsets.ModelViewSet):
     queryset = RoomItemType.objects.all()

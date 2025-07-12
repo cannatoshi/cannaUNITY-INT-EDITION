@@ -6,10 +6,9 @@
 ![GitHub last commit](https://img.shields.io/github/last-commit/saschadaemgen/cannaUNITY)
 ![Security Badge](https://img.shields.io/badge/Sicherheit-Enterprise%20Grade-green)
 ![Encryption Badge](https://img.shields.io/badge/Verschlüsselung-AES--256-blue)
-![Auth Badge](https://img.shields.io/badge/Authentifizierung-3--Faktor-orange)
 ![GDPR Badge](https://img.shields.io/badge/DSGVO-Konform-brightgreen)
 
-> **Modulare Open-Source-Software Suite für Cannabis Social Clubs und Anbauvereinigungen gemäß dem deutschem Konsumcannabisgesetz § (KCanG)**
+> **Modulares Open-Source-Software Framework für Cannabis Social Clubs und Anbauvereinigungen gemäß dem deutschem Konsumcannabisgesetz § (KCanG)**
 > Mitgliederverwaltung · eVereinsverwaltung · Berichtsverwaltung · Aufgabenplanung ·  Growcontroller · Zutrittskontrolle · eStempelkarte · Track & Trace · Buchhaltung · WaWi · Raumautomation · Sicherheitssystem · IOS & Android APP · Verwaltungs, Administrations und User UI`s,
 
 (Masteransicht für "festes" UI Panel 1920x1080p)

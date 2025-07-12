@@ -29,10 +29,64 @@
 
 ## 📦 Was ist cannaUNITY?
 
-**cannaUNITY** ist eine professionelle Open-Source-Plattform zur Organisation, Verwaltung und Automatisierung von Cannabis-Anbauvereinigungen gemäß dem Konsumcannabisgesetz (KCanG), welche entstanden ist weil wir keine Lösung gefunden haben, die die Möglichkeiten moderner Technologie wirklich nutzt und die gesetzlichen Anforderungen an Sicherheit, Transparenz und Nachvollziehbarkeit umfassend abdeckt. Unser Ansatz ist es, den gesamten Betrieb einer Cannabis-Anbauvereinigung nicht nur zu verwalten, sondern zu automatisieren und digital abzusichern – von der alters- und THC-gerechten Zugangskontrolle mit UniFi Access, über KI-gestützte, datenschutzkonforme Protokollierung der Anwesenheit mit UniFi Protect, bis hin zur smarten Steuerung aller Anlagen per SIMATIC S7. Damit können sowohl Zutritt, als auch Arbeits- und Produktionsprozesse jederzeit lückenlos dokumentiert, kontrolliert und behördengerecht nachgewiesen werden.
+**cannaUNITY** ist ein professionelles Open-Source-Framework zur Organisation, Verwaltung und Automatisierung von Cannabis-Anbauvereinigungen gemäß Konsumcannabisgesetz (KCanG).
 
-Darüber hinaus haben wir eine vollständig integrierte Warenwirtschaft und Buchhaltung geschaffen, die automatisch mit allen Vorgängen im System verknüpft ist. Jeder Produktionsschritt, jede Ausgabe und jede Buchung ist zentral erfasst und lässt sich sofort nachvollziehen – effizient, sicher und GoB-konform. Dank nahtloser Verbindung von Aufgabenplanung, Track&Trace, Warenwirtschaft und Finanzbuchhaltung entsteht eine All-in-One-Plattform, die sowohl operative Abläufe als auch die gesetzlichen Vorgaben optimal erfüllt und gleichzeitig modernste Technologien in einem System vereint.
+> **Hinweis:**  
+> Dieses Repository enthält das **Framework** als technischen Baukasten und ist nicht als sofort lauffähiges Komplettsystem vorgesehen. Für die produktive Nutzung muss das Framework von Entwickler:innen in bestehende oder neue Systemlandschaften integriert werden.
 
+---
+
+## 🧩 Konzept und Zielsetzung
+
+cannaUNITY stellt sämtliche Bausteine und Schnittstellen bereit, um die gesetzlichen und organisatorischen Anforderungen moderner Cannabis-Anbauvereinigungen digital, automatisiert und transparent abzubilden.  
+Kernpunkte sind u.a.:
+
+- **Zugangskontrolle** (UniFi Access, alters-/THC-gerecht)
+- **KI-gestützte, DSGVO-konforme Protokollierung** (UniFi Protect)
+- **Automatisierte Anlagensteuerung** (SIMATIC S7 Integration)
+- **Warenwirtschaft und Buchhaltung** (GoB-konform, prozessbasiert)
+
+> **ℹ️ Zielgruppe:**  
+> - Entwickler:innen und Tech-Teams, die individuelle oder erweiterbare Lösungen aufsetzen möchten  
+> - Integratoren und Dienstleister, die Vereine technisch unterstützen  
+> - Vereine mit eigenem IT-Know-how
+
+---
+
+## 🚧 Aktueller Status
+
+- Dieses Repository bildet das **Open-Source-Framework** ab und richtet sich vor allem an Entwickler:innen und technische Teams.
+- Eine kostenpflichtige **Professional-Version** (einsatzfertige Komplettlösung, inkl. Konfigurations- und Installationspaketen) befindet sich in Planung.
+- Zusätzlich werden zukünftig **passende Hardware-Komponenten** (Miete oder Kauf im Paket) angeboten, um eine nahtlose End-to-End-Lösung zu ermöglichen.
+
+> **⚠️ Wichtig:**  
+> Das Framework alleine ist nicht als Plug-and-Play-Lösung gedacht!  
+> Eine spätere produktive Nutzung erfordert Integration und ggf. Anpassung an die jeweilige Systemumgebung.
+
+---
+
+## 💡 Highlights
+
+- **Modulares, modernes, erweiterbares Framework**
+- **Rechtssicherheit** (Transparenz, Nachvollziehbarkeit, Datenschutz)
+- **Automatisierung** aller operativen und dokumentationspflichtigen Prozesse
+- **Flexible Hardware-Integration**
+- **10 Schritte UUID Track & Trace**
+- **GoB-konforme Buchhaltung und Warenwirtschaft**
+- **Zukunftssicher**: Roadmap zur Professional-Version mit Hardware-Bundles
+
+---
+
+## 📈 Roadmap
+
+- [ ] Framework-Release als Open Source Final v1.xx
+- [ ] Entwicklung der Professional-Version (einsatzfertige Komplettlösung)
+- [ ] Erweiterung um offizielle Hardware-Angebote (Miete/Kauf)
+- [ ] Unterstützung weiterer Schnittstellen und Technologien
+
+---
+
+**cannaUNITY** steht für ein Höchstmaß an Transparenz, Sicherheit und technischer Zukunftsfähigkeit in Cannabis-Anbauvereinen – heute als Framework, morgen als vollintegrierte Komplettlösung.
 "Crescit sub pondere virtus." – "Tugend wächst unter Belastung."
 
 ---

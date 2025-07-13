@@ -227,6 +227,14 @@ Die verbleibenden Schritte (6–10) erhalten die gleiche Multimedia-Anbindung su
 
 ---
 
+## 🔧UniFi Protect Sensoren – Automatisiertes Raumklima-Monitoring für Cannabis Track & Trace 
+
+<p align="center">
+  <img src="screenshots/unifi_protect/sensoren_history.png" alt="Vorschau" width="1920">
+</p>
+
+Jetzt neu – vollautomatisiertes Raumklima-Monitoring mit UniFi UP-Sense & Superlink Sensoren: Echtzeit-Klimadaten, lückenlose Historisierung, EU-GMP-konform, zukunftssicher für kommende IoT-Sensoren mit 2 km Reichweite. Direkt integriert – inklusive Live-Status, Alarmierung und PDF-Export für Behörden.
+
 ## 🔧 Integration & Automatisierung
 
 <p align="center">

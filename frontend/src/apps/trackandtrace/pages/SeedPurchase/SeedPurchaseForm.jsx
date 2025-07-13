@@ -77,6 +77,18 @@ export default function SeedPurchaseForm({ open, onClose, onSuccess }) {
     // Wenn ein Abbruch in Bearbeitung ist, nichts tun
     if (isAborting) return;
     
+    // Device ID aus dem ausgewählten Raum holen
+    const selectedRoom = rooms.find(room => room.id === formData.room_id);
+    const deviceId = selectedRoom?.unifi_device_id;
+    
+    if (!deviceId) {
+      // Fehlerbehandlung wenn keine Device ID vorhanden ist
+      console.error('Der ausgewählte Raum hat kein zugeordnetes RFID-Gerät!');
+      // Hier könnte man eine Snackbar/Alert anzeigen
+      alert('Der ausgewählte Raum hat kein zugeordnetes RFID-Gerät!');
+      return;
+    }
+    
     // Abbruch-Controller erstellen
     const controller = new AbortController();
     setAbortController(controller);
@@ -89,8 +101,9 @@ export default function SeedPurchaseForm({ open, onClose, onSuccess }) {
       // Prüfen vor jeder API-Anfrage, ob ein Abbruch initiiert wurde
       if (isAborting) return;
       
-      // 1. Karte scannen und User auslesen
+      // 1. Karte scannen und User auslesen - MIT DEVICE ID
       const bindRes = await api.get('/unifi_api_debug/bind-rfid-session/', {
+        params: { device_id: deviceId },  // NEU: device_id mitschicken
         signal: controller.signal
       });
       

@@ -15,11 +15,13 @@ import {
   Box,
   CircularProgress,
   Fade,
-  Zoom
+  Zoom,
+  Alert
 } from '@mui/material'
 import CreditCardIcon from '@mui/icons-material/CreditCard'
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
 import LocalFloristIcon from '@mui/icons-material/LocalFlorist'
+import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 import api from '@/utils/api'
 
 /**
@@ -65,6 +67,7 @@ const ConvertDialog = ({
   const [abortController, setAbortController] = useState(null)
   const [isAborting, setIsAborting] = useState(false)
   const [memberId, setMemberId] = useState(null)
+  const [errorMessage, setErrorMessage] = useState('')
   
   const title = type === 'mother' ? 'Zu Mutterpflanze konvertieren' : 'Zu Blühpflanze konvertieren'
   
@@ -77,6 +80,7 @@ const ConvertDialog = ({
       setMemberId(null)
       setAbortController(null)
       setIsAborting(false)
+      setErrorMessage('')
       
       // DIRTY FIX: Für Mutterpflanzen immer quantity auf 1 setzen
       if (type === 'mother') {
@@ -89,6 +93,7 @@ const ConvertDialog = ({
   const startRfidScan = async () => {
     setScanMode(true)
     setScanSuccess(false)
+    setErrorMessage('')
     await handleRfidScan()
   }
   
@@ -112,6 +117,16 @@ const ConvertDialog = ({
     // Wenn ein Abbruch in Bearbeitung ist, nichts tun
     if (isAborting) return
     
+    // Device ID aus dem ausgewählten Raum holen
+    const selectedRoom = rooms.find(r => r.id === selectedRoomId)
+    const deviceId = selectedRoom?.unifi_device_id
+    
+    if (!deviceId) {
+      setErrorMessage('⚠️ Der ausgewählte Raum hat kein zugeordnetes RFID-Gerät!')
+      setScanMode(false)
+      return
+    }
+    
     // Abbruch-Controller erstellen
     const controller = new AbortController()
     setAbortController(controller)
@@ -119,13 +134,14 @@ const ConvertDialog = ({
     setLoading(true)
     
     try {
-      console.log("🚀 Starte RFID-Scan für Konvertierung...")
+      console.log(`🚀 Starte RFID-Scan für Konvertierung mit Device ID: ${deviceId} (Raum: ${selectedRoom.name})...`)
       
       // Prüfen vor jeder API-Anfrage, ob ein Abbruch initiiert wurde
       if (isAborting) return
       
-      // 1. Karte scannen und User auslesen
+      // 1. Karte scannen und User auslesen - MIT device_id
       const bindRes = await api.get('/unifi_api_debug/bind-rfid-session/', {
+        params: { device_id: deviceId },
         signal: controller.signal
       })
       
@@ -179,7 +195,7 @@ const ConvertDialog = ({
         console.log('RFID-Scan wurde abgebrochen')
       } else {
         console.error('RFID-Bindungsfehler:', error)
-        alert(error.response?.data?.detail || error.message || 'RFID-Verifizierung fehlgeschlagen')
+        setErrorMessage(error.response?.data?.detail || error.message || 'RFID-Verifizierung fehlgeschlagen')
       }
       
       // UI nur zurücksetzen, wenn kein Abbruch im Gange ist
@@ -214,6 +230,7 @@ const ConvertDialog = ({
       setLoading(false)
       setScanSuccess(false)
       setScannedMemberName('')
+      setErrorMessage('')
       
       // Nach einer kurzen Verzögerung den Abbruch-Status zurücksetzen
       setTimeout(() => {
@@ -241,6 +258,7 @@ const ConvertDialog = ({
     setScanSuccess(false)
     setScannedMemberName('')
     setMemberId(null)
+    setErrorMessage('')
     
     // Parent onClose aufrufen
     if (onClose) {
@@ -249,6 +267,12 @@ const ConvertDialog = ({
     } else {
       console.error('onClose Funktion nicht verfügbar!')
     }
+  }
+
+  // Prüfen ob der ausgewählte Raum ein RFID-Gerät hat
+  const selectedRoomHasRfid = () => {
+    const room = rooms.find(r => r.id === selectedRoomId)
+    return room?.unifi_device_id ? true : false
   }
 
   return (
@@ -282,7 +306,7 @@ const ConvertDialog = ({
           left: 0,
           right: 0,
           bottom: 0,
-          bgcolor: 'success.light',
+          bgcolor: scanSuccess ? 'success.light' : errorMessage ? 'error.light' : 'success.light',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
@@ -308,7 +332,28 @@ const ConvertDialog = ({
             </Button>
           )}
           
-          {scanSuccess ? (
+          {errorMessage ? (
+            // Fehlermeldung anzeigen
+            <Fade in={!!errorMessage}>
+              <Box sx={{ textAlign: 'center' }}>
+                <WarningAmberIcon sx={{ fontSize: 80, color: 'white', mb: 2 }} />
+                <Typography variant="h6" align="center" color="white" fontWeight="bold" gutterBottom>
+                  {errorMessage}
+                </Typography>
+                <Button 
+                  onClick={() => {
+                    setErrorMessage('')
+                    setScanMode(false)
+                  }}
+                  variant="contained" 
+                  color="inherit"
+                  sx={{ mt: 2 }}
+                >
+                  Zurück
+                </Button>
+              </Box>
+            </Fade>
+          ) : scanSuccess ? (
             // Erfolgsmeldung nach erfolgreichem Scan
             <Fade in={scanSuccess}>
               <Box sx={{ textAlign: 'center' }}>
@@ -414,11 +459,26 @@ const ConvertDialog = ({
                   value={room.id}
                 >
                   {room.name}
+                  {!room.unifi_device_id && (
+                    <Typography variant="caption" color="error" sx={{ ml: 1 }}>
+                      (kein RFID)
+                    </Typography>
+                  )}
                 </MenuItem>
               ))
             }
           </Select>
         </FormControl>
+        
+        {/* Warnung wenn Raum kein RFID-Gerät hat */}
+        {selectedRoomId && !selectedRoomHasRfid() && (
+          <Alert severity="warning" sx={{ mt: 1 }}>
+            <Typography variant="body2">
+              Der ausgewählte Raum hat kein zugeordnetes RFID-Gerät. 
+              Bitte wählen Sie einen anderen Raum oder kontaktieren Sie den Administrator.
+            </Typography>
+          </Alert>
+        )}
         
         <TextField
           label="Notizen (optional)"
@@ -443,8 +503,8 @@ const ConvertDialog = ({
         >
           <Typography variant="body2">
             <strong>Hinweis:</strong> {type === 'mother' 
-              ? 'Aus jedem Samen kann nur eine Mutterpflanze entstehen. Die Zuordnung erfolgt per RFID.'
-              : 'Die Zuordnung des verantwortlichen Mitglieds erfolgt automatisch per RFID-Autorisierung.'
+              ? 'Aus jedem Samen kann nur eine Mutterpflanze entstehen. Die Zuordnung erfolgt per RFID am Gerät des Zielraums.'
+              : 'Die Zuordnung des verantwortlichen Mitglieds erfolgt automatisch per RFID-Autorisierung am Gerät des Zielraums.'
             }
           </Typography>
         </Box>
@@ -463,7 +523,7 @@ const ConvertDialog = ({
           onClick={startRfidScan}
           variant="contained" 
           color="success"
-          disabled={loading || !isFormValid()}
+          disabled={loading || !isFormValid() || !selectedRoomHasRfid()}
           startIcon={loading ? <CircularProgress size={16} /> : <CreditCardIcon />}
           sx={{ minWidth: 200 }}
         >

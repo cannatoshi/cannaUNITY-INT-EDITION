@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { 
   Dialog, DialogTitle, DialogContent, DialogActions, 
   Button, TextField, Typography, Box, CircularProgress, Fade, Zoom,
-  LinearProgress
+  LinearProgress, FormControl, InputLabel, Select, MenuItem
 } from '@mui/material'
 import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment'
 import CreditCardIcon from '@mui/icons-material/CreditCard'
@@ -26,7 +26,10 @@ const DestroyDialog = ({
   quantity,
   setQuantity,
   showQuantity = false,
-  maxQuantity = 1
+  maxQuantity = 1,
+  rooms,                    // NEU: Räume-Array
+  selectedRoomId,          // NEU: Ausgewählter Raum
+  setSelectedRoomId        // NEU: Setter für Raum
 }) => {
   // State für den RFID-Scan-Modus
   const [scanMode, setScanMode] = useState(false)
@@ -124,6 +127,18 @@ const DestroyDialog = ({
   
   // RFID-Scan starten
   const startRfidScan = async () => {
+    // NEU: Device ID aus dem Raum holen
+    const selectedRoom = rooms?.find(room => room.id === selectedRoomId)
+    const deviceId = selectedRoom?.unifi_device_id
+    
+    if (!deviceId) {
+      setTimeoutMessage('Der Raum hat kein zugeordnetes RFID-Gerät!')
+      setTimeout(() => {
+        setScanMode(false)
+        setTimeoutMessage('')
+      }, 3000)
+      return
+    }
   
     setScanMode(true)
     setScanSuccess(false)
@@ -162,9 +177,11 @@ const DestroyDialog = ({
     }, 30000)
     
     try {
-      // RFID-Session binden
-      console.log("🔄 Starte RFID-Session bind...")
-      const bindRes = await api.get('/unifi_api_debug/bind-rfid-session/')
+      // RFID-Session binden - MIT device_id
+      console.log("🔄 Starte RFID-Session bind mit Device:", deviceId)
+      const bindRes = await api.get('/unifi_api_debug/bind-rfid-session/', {
+        params: { device_id: deviceId }  // NEU: device_id mitschicken
+      })
       const { token, unifi_user_id, unifi_name } = bindRes.data
       
       if (!token || !unifi_user_id || !unifi_name) {
@@ -214,9 +231,11 @@ const DestroyDialog = ({
     }
   }
   
-  // Formular-Validierung
+  // Formular-Validierung erweitert
   const isFormValid = () => {
-    return destroyReason && destroyReason.trim().length > 0
+    return destroyReason && 
+           destroyReason.trim().length > 0 && 
+           selectedRoomId  // NEU: Raum muss ausgewählt sein
   }
 
   return (
@@ -470,6 +489,25 @@ const DestroyDialog = ({
               autoFocus
               placeholder="z.B. Schimmelbefall, Kontamination, beschädigte Samen..."
             />
+            
+            {/* NEU: Raum-Selektor */}
+            <FormControl fullWidth margin="normal" required>
+              <InputLabel>Raum für RFID-Scan</InputLabel>
+              <Select
+                value={selectedRoomId}
+                onChange={(e) => setSelectedRoomId(e.target.value)}
+                label="Raum für RFID-Scan"
+              >
+                <MenuItem value="">
+                  <em>Bitte Raum auswählen</em>
+                </MenuItem>
+                {rooms?.filter(room => room.unifi_device_id).map(room => (
+                  <MenuItem key={room.id} value={room.id}>
+                    {room.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
             
             <Box textAlign="center" mt={3} mb={1}>
               <Button

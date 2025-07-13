@@ -26,7 +26,7 @@ class RoomSerializer(serializers.ModelSerializer):
             'room_type', 'room_type_display', 'pflanzenanzahl',
             'length', 'width', 'height', 'grid_size', 'volume',
             'unifi_device_id', 'unifi_device_info',
-            'protect_sensors', 'protect_sensors_info',  # NEU
+            'protect_sensors', 'protect_sensors_info',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at']

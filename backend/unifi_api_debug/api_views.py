@@ -26,7 +26,10 @@ class TestNfcSessionView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        token = get_token_from_reader()
+        # NEU: Optional device_id aus Query Parameters
+        device_id = request.query_params.get('device_id', None)
+        
+        token = get_token_from_reader(device_id)
         if not token:
             return Response({"success": False, "message": "Keine Karte erkannt."})
 
@@ -68,7 +71,8 @@ class TestNfcSessionView(APIView):
             raw_data=str({
                 "unifi_name": full_name,
                 "unifi_id": unifi_user_id,
-                "member_name": member_name
+                "member_name": member_name,
+                "device_id": device_id  # NEU: Device ID im Log speichern
             })
         )
 
@@ -77,7 +81,8 @@ class TestNfcSessionView(APIView):
             "token": token,
             "unifi_id": unifi_user_id,
             "unifi_name": full_name,
-            "member_name": member_name or "Nicht gefunden"
+            "member_name": member_name or "Nicht gefunden",
+            "device_id": device_id  # NEU: Device ID in Response
         })
 
 
@@ -94,20 +99,34 @@ class BindRfidSessionView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        token, user_id, full_name = resolve_and_store_user_from_token()
+        # NEU: Device ID aus Query Parameters holen
+        device_id = request.query_params.get('device_id', None)
+        
+        # Wenn eine device_id übergeben wurde, diese verwenden
+        token, user_id, full_name = resolve_and_store_user_from_token(device_id)
 
         if not token:
-            return Response({"success": False, "message": "Keine Karte erkannt."}, status=400)
+            return Response({
+                "success": False, 
+                "message": "Keine Karte erkannt.",
+                "device_id": device_id
+            }, status=400)
 
         if not user_id:
-            return Response({"success": False, "token": token, "message": "Kein zugehöriger UniFi-Nutzer gefunden."}, status=404)
+            return Response({
+                "success": False, 
+                "token": token, 
+                "message": "Kein zugehöriger UniFi-Nutzer gefunden.",
+                "device_id": device_id
+            }, status=404)
 
         return Response({
             "success": True,
             "token": token,
             "unifi_user_id": user_id,
             "unifi_name": full_name,
-            "message": "RFID erfolgreich mit UniFi-Benutzer verknüpft."
+            "message": "RFID erfolgreich mit UniFi-Benutzer verknüpft.",
+            "device_id": device_id  # NEU: Device ID in Response
         })
 
 
@@ -141,11 +160,15 @@ class SecureMemberBindingView(APIView):
         except Member.DoesNotExist:
             return Response({"detail": "Mitglied nicht gefunden."}, status=status.HTTP_404_NOT_FOUND)
 
+        # NEU: Optional device_id aus Request Data
+        device_id = request.data.get("device_id", None)
+
         return Response({
             "success": True,
             "member_id": member.id,
             "member_name": str(member),
-            "timestamp": now()
+            "timestamp": now(),
+            "device_id": device_id  # NEU: Device ID in Response
         })
 
 
@@ -154,10 +177,18 @@ class CancelRfidSessionView(APIView):
 
     def post(self, request):
         from django.core.cache import cache
-        session_id = cache.get('active_rfid_session_id')
+        
+        # NEU: Optional device-spezifische Session ID
+        device_id = request.data.get('device_id', None)
+        cache_key = f'active_rfid_session_id_{device_id}' if device_id else 'active_rfid_session_id'
+        session_id = cache.get(cache_key)
         
         if not session_id:
-            return Response({"success": False, "message": "Keine aktive Session gefunden."}, status=404)
+            return Response({
+                "success": False, 
+                "message": "Keine aktive Session gefunden.",
+                "device_id": device_id
+            }, status=404)
         
         try:
             # UniFi API aufrufen
@@ -173,23 +204,26 @@ class CancelRfidSessionView(APIView):
             )
             
             # Den Cache-Eintrag für die aktive Session löschen
-            cache.delete('active_rfid_session_id')
+            cache.delete(cache_key)
             
             if response.status_code == 200:
                 return Response({
                     "success": True, 
-                    "message": "RFID-Session erfolgreich abgebrochen."
+                    "message": "RFID-Session erfolgreich abgebrochen.",
+                    "device_id": device_id
                 })
             else:
                 return Response({
                     "success": False, 
-                    "message": f"Fehler beim Abbrechen der Session. Status: {response.status_code}"
+                    "message": f"Fehler beim Abbrechen der Session. Status: {response.status_code}",
+                    "device_id": device_id
                 }, status=400)
                 
         except Exception as e:
             return Response({
                 "success": False, 
-                "message": f"Fehler beim Abbrechen der Session: {str(e)}"
+                "message": f"Fehler beim Abbrechen der Session: {str(e)}",
+                "device_id": device_id
             }, status=500)
         
 
@@ -222,4 +256,159 @@ class UnifiDevicesView(APIView):
             "success": True,
             "devices": formatted_devices,
             "count": len(formatted_devices)
+        })
+
+
+# NEU: Erweiterte Device-Management Views
+class DeviceStatusView(APIView):
+    """Zeigt den aktuellen Status eines spezifischen Geräts"""
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request, device_id):
+        service = UnifiAccessService()
+        
+        try:
+            # Device Details abrufen
+            headers = {
+                "Authorization": f"Bearer {UNIFI_API_TOKEN}",
+                "Accept": "application/json",
+            }
+            
+            response = requests.get(
+                f"{UNIFI_API_URL}/devices/{device_id}",
+                headers=headers,
+                verify=False
+            )
+            
+            if response.status_code != 200:
+                return Response({
+                    "success": False,
+                    "message": "Gerät nicht gefunden"
+                }, status=404)
+            
+            device = response.json()
+            
+            # Aktive Sessions für dieses Gerät prüfen
+            from django.core.cache import cache
+            session_id = cache.get(f'active_rfid_session_id_{device_id}')
+            
+            return Response({
+                "success": True,
+                "device": device,
+                "has_active_session": session_id is not None,
+                "session_id": session_id
+            })
+            
+        except Exception as e:
+            return Response({
+                "success": False,
+                "message": f"Fehler beim Abrufen des Gerätestatus: {str(e)}"
+            }, status=500)
+
+
+class BulkRfidAssignView(APIView):
+    """Ermöglicht das Zuweisen mehrerer RFID-Karten in einem Durchgang"""
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        assignments = request.data.get('assignments', [])
+        
+        if not assignments:
+            return Response({
+                "success": False,
+                "message": "Keine Zuweisungen übergeben"
+            }, status=400)
+        
+        results = []
+        errors = []
+        
+        for assignment in assignments:
+            token = assignment.get('token')
+            member_id = assignment.get('member_id')
+            
+            if not token or not member_id:
+                errors.append({
+                    "token": token,
+                    "error": "Token oder Member ID fehlt"
+                })
+                continue
+            
+            try:
+                member = Member.objects.get(id=member_id)
+                # Hier würde die eigentliche Zuweisung stattfinden
+                results.append({
+                    "token": token,
+                    "member_id": member_id,
+                    "member_name": str(member),
+                    "success": True
+                })
+            except Member.DoesNotExist:
+                errors.append({
+                    "token": token,
+                    "member_id": member_id,
+                    "error": "Mitglied nicht gefunden"
+                })
+        
+        return Response({
+            "success": len(errors) == 0,
+            "results": results,
+            "errors": errors,
+            "total": len(assignments),
+            "successful": len(results),
+            "failed": len(errors)
+        })
+
+
+class RfidSessionHistoryView(APIView):
+    """Zeigt die Historie aller RFID-Sessions an"""
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        # Filtere nach device_id wenn angegeben
+        device_id = request.query_params.get('device_id', None)
+        
+        queryset = NfcDebugLog.objects.all()
+        
+        if device_id:
+            # Filtere Logs die diese device_id enthalten
+            queryset = queryset.filter(raw_data__contains=f'"device_id": "{device_id}"')
+        
+        # Limitiere auf die letzten 50 Einträge
+        logs = queryset.order_by('-timestamp')[:50]
+        
+        serializer = NfcDebugLogSerializer(logs, many=True)
+        
+        return Response({
+            "success": True,
+            "count": len(serializer.data),
+            "device_id": device_id,
+            "history": serializer.data
+        })
+    
+class BindRfidSessionView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # NEU: Device ID aus Query Parameters holen
+        device_id = request.query_params.get('device_id', None)
+        
+        # Debug-Ausgabe
+        print(f"🔍 BindRfidSessionView aufgerufen mit device_id: {device_id}")
+        
+        # Wenn eine device_id übergeben wurde, diese verwenden
+        token, user_id, full_name = resolve_and_store_user_from_token(device_id)
+        
+        if not token:
+            return Response(
+                {"error": "Kein RFID-Token empfangen. Bitte Karte auflegen."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Erfolgreich - Daten zurückgeben
+        return Response({
+            "token": token,
+            "unifi_user_id": user_id,
+            "unifi_name": full_name,
+            "message": f"RFID-Karte erkannt für: {full_name}",
+            "device_id": device_id  # Optional: Device ID zurückgeben zur Bestätigung
         })

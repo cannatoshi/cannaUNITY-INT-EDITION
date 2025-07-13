@@ -90,6 +90,9 @@ export default function SeedPurchasePage() {
   // State für die Mitglieder- und Raumauswahl bei Konvertierung
   const [selectedMemberId, setSelectedMemberId] = useState('')
   const [selectedRoomId, setSelectedRoomId] = useState('')
+  
+  // NEU: Separater State für Destroy-Dialog Raum (optional, falls du Convert und Destroy trennen willst)
+  const [destroyRoomId, setDestroyRoomId] = useState('')
 
   // State für die Mitgliederauswahl bei Vernichtung
   const [destroyedByMemberId, setDestroyedByMemberId] = useState('')
@@ -563,6 +566,14 @@ export default function SeedPurchasePage() {
     setDestroyReason('')
     setDestroyQuantity(1)
     setDestroyedByMemberId('')
+    
+    // NEU: Setze den Raum für Destroy-Dialog
+    // Option 1: Verwende den gemeinsamen selectedRoomId
+    setSelectedRoomId(seed?.room?.id || '')
+    
+    // Option 2: Verwende den separaten destroyRoomId (falls du sie trennen willst)
+    // setDestroyRoomId(seed?.room?.id || '')
+    
     setOpenDestroyDialog(true)
   }
   
@@ -921,6 +932,11 @@ export default function SeedPurchasePage() {
             setQuantity={setDestroyQuantity}
             showQuantity={tabValue === 0}
             maxQuantity={selectedSeed?.remaining_quantity || 1}
+            rooms={rooms}
+            selectedRoomId={selectedRoomId}  // Option 1: Gemeinsamer State
+            setSelectedRoomId={setSelectedRoomId}  // Option 1: Gemeinsamer State
+            // selectedRoomId={destroyRoomId}  // Option 2: Separater State
+            // setSelectedRoomId={setDestroyRoomId}  // Option 2: Separater State
           />
         </div>
       </Fade>

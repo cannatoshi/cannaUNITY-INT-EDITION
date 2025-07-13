@@ -1,5 +1,3 @@
-# Datei: backend/unifi_api_debug/unifi_rfid_listener.py
-
 import os
 import time
 import requests
@@ -21,8 +19,19 @@ HEADERS = {
     "Accept": "application/json",
 }
 
-def resolve_and_store_user_from_token():
-    token, session_id = get_token_from_reader()
+def resolve_and_store_user_from_token(device_id=None):
+    """
+    Löst einen RFID-Token zu einem Benutzer auf und speichert die Daten.
+    
+    Args:
+        device_id: Optional - Device ID des RFID-Readers
+    
+    Returns:
+        tuple: (token, user_id, full_name)
+    """
+    # Token vom Reader holen - jetzt mit device_id
+    token, session_id = get_token_from_reader(device_id)
+    
     if not token:
         return None, None, None
 
@@ -48,7 +57,17 @@ def save_recent_rfid_user(token: str, user_id: str, duration=30):
 def get_recent_rfid_user(token: str):
     return cache.get(f"rfid:{token}")
 
-def get_token_from_reader():
+def get_token_from_reader(device_id=None):
+    """
+    Liest RFID-Token von einem bestimmten Reader
+    
+    Args:
+        device_id: Optional - Wenn nicht angegeben, wird die Default-ID aus Settings verwendet
+    """
+    # Fallback auf Settings, wenn keine device_id übergeben wurde
+    if not device_id:
+        device_id = settings.UNIFI_DEVICE_ID
+    
     session_id = None
     token = None
 
@@ -56,7 +75,7 @@ def get_token_from_reader():
         response = requests.post(
             f"{UNIFI_API_URL}/credentials/nfc_cards/sessions",
             headers=HEADERS,
-            json={"device_id": UNIFI_DEVICE_ID},
+            json={"device_id": device_id},  # Verwende die übergebene device_id
             verify=False,
         )
         if response.status_code == 200:

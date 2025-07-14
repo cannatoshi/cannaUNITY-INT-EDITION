@@ -12,6 +12,8 @@ import TableChartIcon from '@mui/icons-material/TableChart';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ThermostatIcon from '@mui/icons-material/Thermostat';
+import SecurityIcon from '@mui/icons-material/Security';
+import BadgeIcon from '@mui/icons-material/Badge';
 
 import AccordionRow from '@/components/common/AccordionRow';
 import TableHeader from '@/components/common/TableHeader';
@@ -37,16 +39,16 @@ const RoomTable = ({
   // Spalten für den Tabellenkopf definieren
   const headerColumns = [
     { label: '', width: '3%', align: 'center' },
-    { label: 'Name', width: '13%', align: 'left' },
-    { label: 'Raumtyp', width: '10%', align: 'left' },
-    { label: 'UniFi Access', width: '16%', align: 'left' },
-    { label: 'Größe', width: '10%', align: 'center' },
-    { label: 'Fläche (m²)', width: '8%', align: 'center' },
-    { label: 'Volumen (m³)', width: '8%', align: 'center' },
-    { label: 'Max. Pers.', width: '7%', align: 'center' },
+    { label: 'Name', width: '12%', align: 'left' },
+    { label: 'Raumtyp', width: '9%', align: 'left' },
+    { label: 'UniFi Access', width: '15%', align: 'left' },
+    { label: 'Größe', width: '9%', align: 'center' },
+    { label: 'Fläche (m²)', width: '7%', align: 'center' },
+    { label: 'Volumen (m³)', width: '7%', align: 'center' },
+    { label: 'Max. Pers.', width: '6%', align: 'center' },
     { label: 'Pflanzen / Menge', width: '7%', align: 'center' },
-    { label: 'Status', width: '7%', align: 'center' },
-    { label: 'Aktionen', width: '11%', align: 'center' }
+    { label: 'Status', width: '6%', align: 'center' },
+    { label: 'Aktionen', width: '19%', align: 'center' }
   ];
 
   // Funktion zum Erstellen der Spalten für eine Zeile
@@ -80,51 +82,72 @@ const RoomTable = ({
       },
       {
         content: room.name,
-        width: '13%',
+        width: '12%',
         bold: true,
         icon: TableChartIcon,
         iconColor: 'success.main'
       },
       {
         content: room.room_type_display || 'Sonstiges',
-        width: '10%'
+        width: '9%'
       },
       {
         content: (() => {
           if (room.unifi_device_info) {
             return (
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+              <Tooltip 
+                title={
+                  <Box>
+                    <Typography variant="caption" sx={{ display: 'block', fontWeight: 500 }}>
+                      Device ID: {room.unifi_device_id}
+                    </Typography>
+                    {room.unifi_device_info.name !== room.unifi_device_info.alias && (
+                      <Typography variant="caption" sx={{ display: 'block' }}>
+                        System Name: {room.unifi_device_info.name}
+                      </Typography>
+                    )}
+                  </Box>
+                }
+                arrow
+              >
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    fontSize: '0.75rem',
+                    cursor: 'help',
+                    '&:hover': {
+                      textDecoration: 'underline dotted',
+                      textUnderlineOffset: '3px'
+                    }
+                  }}
+                >
                   {room.unifi_device_info.alias || room.unifi_device_info.name}
                 </Typography>
-                <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary' }}>
-                  ({room.unifi_device_id})
-                </Typography>
-              </Box>
+              </Tooltip>
             );
           }
-          return <Typography variant="caption" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>Kein Device</Typography>;
+          return <Typography variant="caption" sx={{ color: 'text.secondary', fontStyle: 'italic', fontSize: '0.75rem' }}>Kein Device</Typography>;
         })(),
-        width: '16%'
+        width: '15%'
       },
       {
         content: `${(room.length / 100).toFixed(1)}m × ${(room.width / 100).toFixed(1)}m`,
-        width: '10%',
+        width: '9%',
         align: 'center'
       },
       {
         content: flaeche.toFixed(1),
-        width: '8%',
+        width: '7%',
         align: 'center'
       },
       {
         content: volumen.toFixed(1),
-        width: '8%',
+        width: '7%',
         align: 'center'
       },
       {
         content: room.capacity,
-        width: '7%',
+        width: '6%',
         align: 'center'
       },
       {
@@ -146,106 +169,246 @@ const RoomTable = ({
       },
       {
         content: room.is_active ? 'Aktiv' : 'Inaktiv',
-        width: '7%',
+        width: '6%',
         align: 'center',
         color: room.is_active ? 'success.main' : 'error.main'
       },
       {
         content: (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', pl: 1 }}>
-            <Tooltip title="Details anzeigen">
-              <IconButton 
-                component={Link} 
-                to={`/rooms/${room.id}`}
-                size="small"
-                sx={{ 
-                  color: 'white',
-                  backgroundColor: 'info.main',
-                  '&:hover': { backgroundColor: 'info.dark' },
-                  width: '28px',
-                  height: '28px',
-                  mr: 0.5
-                }}
-              >
-                <VisibilityIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-            {room.protect_sensors_info && room.protect_sensors_info.length > 0 && (
-              <Tooltip title="Sensordaten anzeigen">
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 0.5 }}>
+            {/* Details anzeigen */}
+            <Box
+              sx={{
+                border: '1px solid rgba(0, 0, 0, 0.12)',
+                borderRadius: '4px',
+                p: 0.5,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'white',
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                  borderColor: 'rgba(0, 0, 0, 0.23)'
+                }
+              }}
+            >
+              <Tooltip title="Details anzeigen">
                 <IconButton 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedRoom(room);
-                    setSensorModalOpen(true);
-                  }}
+                  component={Link} 
+                  to={`/rooms/${room.id}`}
                   size="small"
                   sx={{ 
-                    color: 'white',
-                    backgroundColor: 'warning.main',
-                    '&:hover': { backgroundColor: 'warning.dark' },
-                    width: '28px',
-                    height: '28px',
-                    mr: 0.5
+                    p: 0.5,
+                    color: 'rgba(0, 0, 0, 0.54)'
                   }}
                 >
-                  <ThermostatIcon fontSize="small" />
+                  <VisibilityIcon sx={{ fontSize: '1rem' }} />
                 </IconButton>
               </Tooltip>
-            )}
-            <Tooltip title="Raumdesigner öffnen">
-              <IconButton 
-                component={Link} 
-                to={`/rooms/${room.id}/designer`}
-                size="small"
-                sx={{ 
-                  color: 'white',
-                  backgroundColor: 'secondary.main',
-                  '&:hover': { backgroundColor: 'secondary.dark' },
-                  width: '28px',
-                  height: '28px',
-                  mr: 0.5
-                }}
-              >
-                <TableChartIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Bearbeiten">
-              <IconButton 
-                component={Link} 
-                to={`/rooms/${room.id}/edit`}
-                size="small"
-                sx={{ 
-                  color: 'white',
-                  backgroundColor: 'primary.main',
-                  '&:hover': { backgroundColor: 'primary.dark' },
-                  width: '28px',
-                  height: '28px',
-                  mr: 0.5
-                }}
-              >
-                <EditIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Löschen">
-              <IconButton 
-                component={Link} 
-                to={`/rooms/${room.id}/delete`}
-                size="small"
-                sx={{ 
-                  color: 'white',
-                  backgroundColor: 'error.main',
-                  '&:hover': { backgroundColor: 'error.dark' },
-                  width: '28px',
-                  height: '28px',
-                  mr: 0.5
-                }}
-              >
-                <DeleteIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
+            </Box>
+            
+            {/* Sensordaten - immer anzeigen, aber disabled wenn keine Sensoren */}
+            <Box
+              sx={{
+                border: '1px solid rgba(0, 0, 0, 0.12)',
+                borderRadius: '4px',
+                p: 0.5,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'white',
+                opacity: room.protect_sensors_info && room.protect_sensors_info.length > 0 ? 1 : 0.5,
+                '&:hover': room.protect_sensors_info && room.protect_sensors_info.length > 0 ? {
+                  backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                  borderColor: 'rgba(0, 0, 0, 0.23)'
+                } : {}
+              }}
+            >
+              <Tooltip title={room.protect_sensors_info && room.protect_sensors_info.length > 0 ? "Sensordaten anzeigen" : "Keine Sensoren vorhanden"}>
+                <span>
+                  <IconButton 
+                    onClick={(e) => {
+                      if (room.protect_sensors_info && room.protect_sensors_info.length > 0) {
+                        e.stopPropagation();
+                        setSelectedRoom(room);
+                        setSensorModalOpen(true);
+                      }
+                    }}
+                    size="small"
+                    disabled={!room.protect_sensors_info || room.protect_sensors_info.length === 0}
+                    sx={{ 
+                      p: 0.5,
+                      color: room.protect_sensors_info && room.protect_sensors_info.length > 0 ? 'rgba(0, 0, 0, 0.54)' : 'rgba(0, 0, 0, 0.26)'
+                    }}
+                  >
+                    <ThermostatIcon sx={{ fontSize: '1rem' }} />
+                  </IconButton>
+                </span>
+              </Tooltip>
+            </Box>
+            
+            {/* Sicherheitskamera Platzhalter */}
+            <Box
+              sx={{
+                border: '1px solid rgba(0, 0, 0, 0.12)',
+                borderRadius: '4px',
+                p: 0.5,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'white',
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                  borderColor: 'rgba(0, 0, 0, 0.23)'
+                }
+              }}
+            >
+              <Tooltip title="Sicherheitskamera (Demnächst verfügbar)">
+                <span>
+                  <IconButton 
+                    size="small"
+                    disabled
+                    sx={{ 
+                      p: 0.5,
+                      color: 'rgba(0, 0, 0, 0.26)'
+                    }}
+                  >
+                    <SecurityIcon sx={{ fontSize: '1rem' }} />
+                  </IconButton>
+                </span>
+              </Tooltip>
+            </Box>
+            
+            {/* Zeiterfassung Platzhalter */}
+            <Box
+              sx={{
+                border: '1px solid rgba(0, 0, 0, 0.12)',
+                borderRadius: '4px',
+                p: 0.5,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'white',
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                  borderColor: 'rgba(0, 0, 0, 0.23)'
+                }
+              }}
+            >
+              <Tooltip title="Digitale Stempelkarte (Demnächst verfügbar)">
+                <span>
+                  <IconButton 
+                    size="small"
+                    disabled
+                    sx={{ 
+                      p: 0.5,
+                      color: 'rgba(0, 0, 0, 0.26)'
+                    }}
+                  >
+                    <BadgeIcon sx={{ fontSize: '1rem' }} />
+                  </IconButton>
+                </span>
+              </Tooltip>
+            </Box>
+            
+            {/* Raumdesigner */}
+            <Box
+              sx={{
+                border: '1px solid rgba(0, 0, 0, 0.12)',
+                borderRadius: '4px',
+                p: 0.5,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'white',
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                  borderColor: 'rgba(0, 0, 0, 0.23)'
+                }
+              }}
+            >
+              <Tooltip title="Raumdesigner öffnen">
+                <IconButton 
+                  component={Link} 
+                  to={`/rooms/${room.id}/designer`}
+                  size="small"
+                  sx={{ 
+                    p: 0.5,
+                    color: 'rgba(0, 0, 0, 0.54)'
+                  }}
+                >
+                  <TableChartIcon sx={{ fontSize: '1rem' }} />
+                </IconButton>
+              </Tooltip>
+            </Box>
+            
+            {/* Bearbeiten */}
+            <Box
+              sx={{
+                border: '1px solid rgba(0, 0, 0, 0.12)',
+                borderRadius: '4px',
+                p: 0.5,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'white',
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                  borderColor: 'rgba(0, 0, 0, 0.23)'
+                }
+              }}
+            >
+              <Tooltip title="Bearbeiten">
+                <IconButton 
+                  component={Link} 
+                  to={`/rooms/${room.id}/edit`}
+                  size="small"
+                  sx={{ 
+                    p: 0.5,
+                    color: 'rgba(0, 0, 0, 0.54)'
+                  }}
+                >
+                  <EditIcon sx={{ fontSize: '1rem' }} />
+                </IconButton>
+              </Tooltip>
+            </Box>
+            
+            {/* Löschen */}
+            <Box
+              sx={{
+                border: '1px solid rgba(0, 0, 0, 0.12)',
+                borderRadius: '4px',
+                p: 0.5,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'white',
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 0, 0, 0.04)',
+                  borderColor: 'error.main'
+                }
+              }}
+            >
+              <Tooltip title="Löschen">
+                <IconButton 
+                  component={Link} 
+                  to={`/rooms/${room.id}/delete`}
+                  size="small"
+                  sx={{ 
+                    p: 0.5,
+                    color: 'rgba(0, 0, 0, 0.54)',
+                    '&:hover': {
+                      color: 'error.main'
+                    }
+                  }}
+                >
+                  <DeleteIcon sx={{ fontSize: '1rem' }} />
+                </IconButton>
+              </Tooltip>
+            </Box>
           </Box>
         ),
-        width: '11%',
+        width: '19%',
         align: 'center'
       }
     ];
@@ -437,56 +600,199 @@ const RoomTable = ({
         />
 
         {/* Aktionsbereich mit ausreichend Abstand zu den Karten darüber */}
-        <Box sx={{ display: 'flex', gap: 2, mt: 4, mb: 1 }}>
-          <Button 
-            variant="contained" 
-            color="info" 
-            component={Link} 
-            to={`/rooms/${room.id}`}
-            startIcon={<VisibilityIcon />}
+        <Box sx={{ display: 'flex', gap: 1, mt: 4, mb: 1, flexWrap: 'wrap' }}>
+          {/* Details anzeigen */}
+          <Box
+            sx={{
+              border: '1px solid rgba(0, 0, 0, 0.12)',
+              borderRadius: '4px',
+              p: 0.75,
+              display: 'inline-flex',
+              alignItems: 'center',
+              backgroundColor: 'white',
+              '&:hover': {
+                backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                borderColor: 'rgba(0, 0, 0, 0.23)'
+              }
+            }}
           >
-            Details anzeigen
-          </Button>
-          {room.protect_sensors_info && room.protect_sensors_info.length > 0 && (
             <Button 
-              variant="contained" 
-              color="warning" 
+              variant="text" 
+              color="inherit" 
+              component={Link} 
+              to={`/rooms/${room.id}`}
+              startIcon={<VisibilityIcon />}
+              sx={{ textTransform: 'none', color: 'rgba(0, 0, 0, 0.87)' }}
+            >
+              Details anzeigen
+            </Button>
+          </Box>
+          
+          {/* Sensordaten */}
+          <Box
+            sx={{
+              border: '1px solid rgba(0, 0, 0, 0.12)',
+              borderRadius: '4px',
+              p: 0.75,
+              display: 'inline-flex',
+              alignItems: 'center',
+              backgroundColor: 'white',
+              opacity: room.protect_sensors_info && room.protect_sensors_info.length > 0 ? 1 : 0.5,
+              '&:hover': room.protect_sensors_info && room.protect_sensors_info.length > 0 ? {
+                backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                borderColor: 'rgba(0, 0, 0, 0.23)'
+              } : {}
+            }}
+          >
+            <Button 
+              variant="text" 
+              color="inherit" 
               onClick={() => {
-                setSelectedRoom(room);
-                setSensorModalOpen(true);
+                if (room.protect_sensors_info && room.protect_sensors_info.length > 0) {
+                  setSelectedRoom(room);
+                  setSensorModalOpen(true);
+                }
               }}
               startIcon={<ThermostatIcon />}
+              disabled={!room.protect_sensors_info || room.protect_sensors_info.length === 0}
+              sx={{ textTransform: 'none', color: room.protect_sensors_info && room.protect_sensors_info.length > 0 ? 'rgba(0, 0, 0, 0.87)' : 'rgba(0, 0, 0, 0.38)' }}
             >
-              Sensordaten anzeigen
+              Sensordaten {room.protect_sensors_info && room.protect_sensors_info.length > 0 ? 'anzeigen' : '(keine vorhanden)'}
             </Button>
-          )}
-          <Button 
-            variant="contained" 
-            color="primary" 
-            component={Link} 
-            to={`/rooms/${room.id}/edit`}
-            startIcon={<EditIcon />}
+          </Box>
+          
+          {/* Sicherheitskamera Platzhalter */}
+          <Box
+            sx={{
+              border: '1px solid rgba(0, 0, 0, 0.12)',
+              borderRadius: '4px',
+              p: 0.75,
+              display: 'inline-flex',
+              alignItems: 'center',
+              backgroundColor: 'white',
+              '&:hover': {
+                backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                borderColor: 'rgba(0, 0, 0, 0.23)'
+              }
+            }}
           >
-            Raum bearbeiten
-          </Button>
-          <Button 
-            variant="contained" 
-            color="secondary" 
-            component={Link} 
-            to={`/rooms/${room.id}/designer`}
-            startIcon={<TableChartIcon />}
+            <Button 
+              variant="text" 
+              color="inherit" 
+              startIcon={<SecurityIcon />}
+              disabled
+              sx={{ textTransform: 'none' }}
+            >
+              Sicherheitskamera (Demnächst)
+            </Button>
+          </Box>
+          
+          {/* Zeiterfassung Platzhalter */}
+          <Box
+            sx={{
+              border: '1px solid rgba(0, 0, 0, 0.12)',
+              borderRadius: '4px',
+              p: 0.75,
+              display: 'inline-flex',
+              alignItems: 'center',
+              backgroundColor: 'white',
+              '&:hover': {
+                backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                borderColor: 'rgba(0, 0, 0, 0.23)'
+              }
+            }}
           >
-            Raumdesigner öffnen
-          </Button>
-          <Button 
-            variant="outlined" 
-            color="error" 
-            component={Link} 
-            to={`/rooms/${room.id}/delete`}
-            startIcon={<DeleteIcon />}
+            <Button 
+              variant="text" 
+              color="inherit" 
+              startIcon={<BadgeIcon />}
+              disabled
+              sx={{ textTransform: 'none' }}
+            >
+              Zeiterfassung (Demnächst)
+            </Button>
+          </Box>
+          
+          {/* Raumdesigner */}
+          <Box
+            sx={{
+              border: '1px solid rgba(0, 0, 0, 0.12)',
+              borderRadius: '4px',
+              p: 0.75,
+              display: 'inline-flex',
+              alignItems: 'center',
+              backgroundColor: 'white',
+              '&:hover': {
+                backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                borderColor: 'rgba(0, 0, 0, 0.23)'
+              }
+            }}
           >
-            Raum löschen
-          </Button>
+            <Button 
+              variant="text" 
+              color="inherit" 
+              component={Link} 
+              to={`/rooms/${room.id}/designer`}
+              startIcon={<TableChartIcon />}
+              sx={{ textTransform: 'none', color: 'rgba(0, 0, 0, 0.87)' }}
+            >
+              Raumdesigner öffnen
+            </Button>
+          </Box>
+          
+          {/* Bearbeiten */}
+          <Box
+            sx={{
+              border: '1px solid rgba(0, 0, 0, 0.12)',
+              borderRadius: '4px',
+              p: 0.75,
+              display: 'inline-flex',
+              alignItems: 'center',
+              backgroundColor: 'white',
+              '&:hover': {
+                backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                borderColor: 'rgba(0, 0, 0, 0.23)'
+              }
+            }}
+          >
+            <Button 
+              variant="text" 
+              color="inherit" 
+              component={Link} 
+              to={`/rooms/${room.id}/edit`}
+              startIcon={<EditIcon />}
+              sx={{ textTransform: 'none', color: 'rgba(0, 0, 0, 0.87)' }}
+            >
+              Raum bearbeiten
+            </Button>
+          </Box>
+          
+          {/* Löschen */}
+          <Box
+            sx={{
+              border: '1px solid rgba(0, 0, 0, 0.12)',
+              borderRadius: '4px',
+              p: 0.75,
+              display: 'inline-flex',
+              alignItems: 'center',
+              backgroundColor: 'white',
+              '&:hover': {
+                backgroundColor: 'rgba(255, 0, 0, 0.04)',
+                borderColor: 'error.main'
+              }
+            }}
+          >
+            <Button 
+              variant="text" 
+              color="error" 
+              component={Link} 
+              to={`/rooms/${room.id}/delete`}
+              startIcon={<DeleteIcon />}
+              sx={{ textTransform: 'none' }}
+            >
+              Raum löschen
+            </Button>
+          </Box>
         </Box>
       </>
     );

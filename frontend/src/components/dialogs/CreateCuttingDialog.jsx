@@ -16,11 +16,13 @@ import {
   CircularProgress,
   Fade,
   Zoom,
-  Chip
+  Chip,
+  Alert
 } from '@mui/material'
 import CreditCardIcon from '@mui/icons-material/CreditCard'
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
 import ContentCutIcon from '@mui/icons-material/ContentCut'
+import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 import api from '@/utils/api'
 
 /**
@@ -66,6 +68,7 @@ const CreateCuttingDialog = ({
   const [abortController, setAbortController] = useState(null)
   const [isAborting, setIsAborting] = useState(false)
   const [memberId, setMemberId] = useState(null)
+  const [errorMessage, setErrorMessage] = useState('')
   
   // Dialog zurücksetzen beim Öffnen
   useEffect(() => {
@@ -76,6 +79,7 @@ const CreateCuttingDialog = ({
       setMemberId(null)
       setAbortController(null)
       setIsAborting(false)
+      setErrorMessage('')
     }
   }, [open])
   
@@ -86,7 +90,7 @@ const CreateCuttingDialog = ({
   const startRfidScan = async () => {
     setScanMode(true)
     setScanSuccess(false)
-    setScannedMemberName('')
+    setErrorMessage('')
     await handleRfidScan()
   }
   
@@ -95,6 +99,16 @@ const CreateCuttingDialog = ({
     // Wenn ein Abbruch in Bearbeitung ist, nichts tun
     if (isAborting) return
     
+    // Device ID aus dem ausgewählten Raum holen
+    const selectedRoom = rooms.find(r => r.id === selectedRoomId)
+    const deviceId = selectedRoom?.unifi_device_id
+    
+    if (!deviceId) {
+      setErrorMessage('⚠️ Der ausgewählte Raum hat kein zugeordnetes RFID-Gerät!')
+      setScanMode(false)
+      return
+    }
+    
     // Abbruch-Controller erstellen
     const controller = new AbortController()
     setAbortController(controller)
@@ -102,13 +116,14 @@ const CreateCuttingDialog = ({
     setLoading(true)
     
     try {
-      console.log("🚀 Starte RFID-Scan für Stecklinge...")
+      console.log(`🚀 Starte RFID-Scan für Stecklinge mit Device ID: ${deviceId} (Raum: ${selectedRoom.name})...`)
       
       // Prüfen vor jeder API-Anfrage, ob ein Abbruch initiiert wurde
       if (isAborting) return
       
-      // 1. Karte scannen und User auslesen
+      // 1. Karte scannen und User auslesen - MIT device_id
       const bindRes = await api.get('/unifi_api_debug/bind-rfid-session/', {
+        params: { device_id: deviceId },
         signal: controller.signal
       })
       
@@ -154,10 +169,9 @@ const CreateCuttingDialog = ({
         // Kleine Verzögerung, damit der State sicher aktualisiert ist
         await new Promise(resolve => setTimeout(resolve, 100))
         
-        // Original onCreateCuttings aufrufen OHNE Parameter
-        // Die Parent-Komponente nutzt selectedMemberId aus ihrem eigenen State
+        // Original onCreateCuttings aufrufen mit member_id Parameter
         if (onCreateCuttings) {
-          await onCreateCuttings(member_id)  // KEIN Parameter - wie im Original!
+          await onCreateCuttings(member_id)
         }
         
         // Nach weiteren 2 Sekunden schließen
@@ -172,7 +186,7 @@ const CreateCuttingDialog = ({
         console.log('RFID-Scan wurde abgebrochen')
       } else {
         console.error('RFID-Bindungsfehler:', error)
-        alert(error.response?.data?.detail || error.message || 'RFID-Verifizierung fehlgeschlagen')
+        setErrorMessage(error.response?.data?.detail || error.message || 'RFID-Verifizierung fehlgeschlagen')
       }
       
       // UI nur zurücksetzen, wenn kein Abbruch im Gange ist
@@ -207,6 +221,7 @@ const CreateCuttingDialog = ({
       setLoading(false)
       setScanSuccess(false)
       setScannedMemberName('')
+      setErrorMessage('')
       
       // Nach einer kurzen Verzögerung den Abbruch-Status zurücksetzen
       setTimeout(() => {
@@ -224,6 +239,7 @@ const CreateCuttingDialog = ({
     setScanSuccess(false)
     setScannedMemberName('')
     setMemberId(null)
+    setErrorMessage('')
     
     // Parent onClose aufrufen
     if (onClose) {
@@ -235,6 +251,12 @@ const CreateCuttingDialog = ({
   // Validierung: Prüft ob alle Felder ausgefüllt sind
   const isFormValid = () => {
     return quantity > 0 && selectedRoomId
+  }
+
+  // Prüfen ob der ausgewählte Raum ein RFID-Gerät hat
+  const selectedRoomHasRfid = () => {
+    const room = rooms.find(r => r.id === selectedRoomId)
+    return room?.unifi_device_id ? true : false
   }
 
   return (
@@ -268,7 +290,7 @@ const CreateCuttingDialog = ({
           left: 0,
           right: 0,
           bottom: 0,
-          bgcolor: 'success.light',
+          bgcolor: scanSuccess ? 'success.light' : errorMessage ? 'error.light' : 'success.light',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
@@ -294,7 +316,28 @@ const CreateCuttingDialog = ({
             </Button>
           )}
           
-          {scanSuccess ? (
+          {errorMessage ? (
+            // Fehlermeldung anzeigen
+            <Fade in={!!errorMessage}>
+              <Box sx={{ textAlign: 'center' }}>
+                <WarningAmberIcon sx={{ fontSize: 80, color: 'white', mb: 2 }} />
+                <Typography variant="h6" align="center" color="white" fontWeight="bold" gutterBottom>
+                  {errorMessage}
+                </Typography>
+                <Button 
+                  onClick={() => {
+                    setErrorMessage('')
+                    setScanMode(false)
+                  }}
+                  variant="contained" 
+                  color="inherit"
+                  sx={{ mt: 2 }}
+                >
+                  Zurück
+                </Button>
+              </Box>
+            </Fade>
+          ) : scanSuccess ? (
             // Erfolgsmeldung nach erfolgreichem Scan
             <Fade in={scanSuccess}>
               <Box sx={{ textAlign: 'center' }}>
@@ -398,11 +441,26 @@ const CreateCuttingDialog = ({
                   value={room.id}
                 >
                   {room.name}
+                  {!room.unifi_device_id && (
+                    <Typography variant="caption" color="error" sx={{ ml: 1 }}>
+                      (kein RFID)
+                    </Typography>
+                  )}
                 </MenuItem>
               ))
             }
           </Select>
         </FormControl>
+        
+        {/* Warnung wenn Raum kein RFID-Gerät hat */}
+        {selectedRoomId && !selectedRoomHasRfid() && (
+          <Alert severity="warning" sx={{ mt: 1 }}>
+            <Typography variant="body2">
+              Der ausgewählte Raum hat kein zugeordnetes RFID-Gerät. 
+              Bitte wählen Sie einen anderen Raum oder kontaktieren Sie den Administrator.
+            </Typography>
+          </Alert>
+        )}
         
         <TextField
           label="Notizen (optional)"
@@ -426,7 +484,7 @@ const CreateCuttingDialog = ({
           }}
         >
           <Typography variant="body2">
-            <strong>Hinweis:</strong> Die Zuordnung des verantwortlichen Mitglieds erfolgt automatisch per RFID-Autorisierung.
+            <strong>Hinweis:</strong> Die Zuordnung des verantwortlichen Mitglieds erfolgt automatisch per RFID-Autorisierung am Gerät des Zielraums.
           </Typography>
         </Box>
       </DialogContent>
@@ -444,7 +502,7 @@ const CreateCuttingDialog = ({
           onClick={startRfidScan}
           variant="contained" 
           color="primary"
-          disabled={loading || !isFormValid()}
+          disabled={loading || !isFormValid() || !selectedRoomHasRfid()}
           startIcon={loading ? <CircularProgress size={16} /> : <ContentCutIcon />}
           sx={{ minWidth: 200 }}
         >

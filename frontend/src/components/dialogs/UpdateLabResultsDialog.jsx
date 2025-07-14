@@ -16,19 +16,22 @@ import {
   IconButton,
   CircularProgress,
   Fade,
-  Zoom
+  Zoom,
+  Alert
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import BiotechIcon from '@mui/icons-material/Biotech';
 import CreditCardIcon from '@mui/icons-material/CreditCard';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import api from '@/utils/api';
 
 const UpdateLabResultsDialog = ({
   open,
   onClose,
   onUpdateLabResults,
-  labTesting
+  labTesting,
+  rooms  // NEU: Räume-Array hinzugefügt
 }) => {
   // States für RFID-Verifizierung
   const [scanMode, setScanMode] = useState(false);
@@ -38,12 +41,14 @@ const UpdateLabResultsDialog = ({
   const [abortController, setAbortController] = useState(null);
   const [isAborting, setIsAborting] = useState(false);
   const [memberId, setMemberId] = useState(null);
+  const [errorMessage, setErrorMessage] = useState('');
   
   // Formular-States
   const [status, setStatus] = useState('pending');
   const [thcContent, setThcContent] = useState('');
   const [cbdContent, setCbdContent] = useState('');
   const [labNotes, setLabNotes] = useState('');
+  const [roomId, setRoomId] = useState('');  // NEU: Raum-State
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -62,8 +67,25 @@ const UpdateLabResultsDialog = ({
       setMemberId(null);
       setAbortController(null);
       setIsAborting(false);
+      setErrorMessage('');
+      
+      // Raum-Logik: Filtere nur Labor-Räume
+      const labRooms = rooms?.filter(room => room.room_type === 'labor') || [];
+      
+      // Wenn die ursprüngliche LabTesting einen Raum hat, nutze diesen
+      if (labTesting.room?.id) {
+        setRoomId(labTesting.room.id);
+      } 
+      // Wenn nur ein Labor-Raum vorhanden ist, automatisch auswählen
+      else if (labRooms.length === 1) {
+        setRoomId(labRooms[0].id);
+      } 
+      // Ansonsten leer lassen
+      else {
+        setRoomId('');
+      }
     }
-  }, [open, labTesting]);
+  }, [open, labTesting, rooms]);
 
   // Validierung
   const validateForm = () => {
@@ -71,6 +93,11 @@ const UpdateLabResultsDialog = ({
     
     if (!status) {
       setError('Bitte wählen Sie einen Status aus');
+      return false;
+    }
+    
+    if (!roomId) {
+      setError('Bitte wählen Sie einen Raum aus');
       return false;
     }
     
@@ -93,6 +120,7 @@ const UpdateLabResultsDialog = ({
     
     setScanMode(true);
     setScanSuccess(false);
+    setErrorMessage('');
     handleRfidScan();
   };
 
@@ -100,17 +128,28 @@ const UpdateLabResultsDialog = ({
   const handleRfidScan = async () => {
     if (isAborting) return;
     
+    // Device ID aus dem ausgewählten Raum holen
+    const selectedRoom = rooms?.find(r => r.id === roomId);
+    const deviceId = selectedRoom?.unifi_device_id;
+    
+    if (!deviceId) {
+      setErrorMessage('⚠️ Der ausgewählte Raum hat kein zugeordnetes RFID-Gerät!');
+      setScanMode(false);
+      return;
+    }
+    
     const controller = new AbortController();
     setAbortController(controller);
     setLoading(true);
     
     try {
-      console.log("🚀 Starte RFID-Scan für Laborergebnisse...");
+      console.log(`🚀 Starte RFID-Scan für Laborergebnisse mit Device ID: ${deviceId} (Raum: ${selectedRoom.name})...`);
       
       if (isAborting) return;
       
-      // 1. Karte scannen und User auslesen
+      // 1. Karte scannen und User auslesen - MIT device_id
       const bindRes = await api.get('/unifi_api_debug/bind-rfid-session/', {
+        params: { device_id: deviceId },
         signal: controller.signal
       });
       
@@ -141,13 +180,14 @@ const UpdateLabResultsDialog = ({
       
       // 3. Nach erfolgreicher Verifizierung die Laborergebnisse aktualisieren
       setTimeout(async () => {
-        // Submit-Daten mit member_id
+        // Submit-Daten mit member_id und room_id
         const formData = {
           status,
           thc_content: thcContent ? parseFloat(thcContent) : null,
           cbd_content: cbdContent ? parseFloat(cbdContent) : null,
           lab_notes: labNotes,
-          member_id: member_id // member_id hinzufügen
+          member_id: member_id, // member_id hinzufügen
+          room_id: roomId // room_id hinzufügen
         };
         
         console.log("Aktualisiere Laborergebnisse mit RFID member_id:", formData);
@@ -168,7 +208,7 @@ const UpdateLabResultsDialog = ({
         console.log('RFID-Scan wurde abgebrochen');
       } else {
         console.error('RFID-Bindungsfehler:', error);
-        setError(error.response?.data?.detail || error.message || 'RFID-Verifizierung fehlgeschlagen');
+        setErrorMessage(error.response?.data?.detail || error.message || 'RFID-Verifizierung fehlgeschlagen');
       }
       
       if (!isAborting) {
@@ -200,6 +240,7 @@ const UpdateLabResultsDialog = ({
       setScanSuccess(false);
       setScannedMemberName('');
       setError('');
+      setErrorMessage('');
       
       setTimeout(() => {
         setIsAborting(false);
@@ -214,11 +255,21 @@ const UpdateLabResultsDialog = ({
     setScannedMemberName('');
     setMemberId(null);
     setError('');
+    setErrorMessage('');
     
     if (onClose) {
       onClose();
     }
   };
+
+  // Prüfen ob der ausgewählte Raum ein RFID-Gerät hat
+  const selectedRoomHasRfid = () => {
+    const room = rooms?.find(r => r.id === roomId);
+    return room?.unifi_device_id ? true : false;
+  };
+
+  // Nur Labor-Räume filtern
+  const labRooms = rooms?.filter(room => room.room_type === 'labor') || [];
 
   return (
     <Dialog 
@@ -249,7 +300,7 @@ const UpdateLabResultsDialog = ({
           left: 0,
           right: 0,
           bottom: 0,
-          bgcolor: 'info.light',
+          bgcolor: scanSuccess ? 'info.light' : errorMessage ? 'error.light' : 'info.light',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
@@ -275,7 +326,28 @@ const UpdateLabResultsDialog = ({
             </Button>
           )}
           
-          {scanSuccess ? (
+          {errorMessage ? (
+            // Fehlermeldung anzeigen
+            <Fade in={!!errorMessage}>
+              <Box sx={{ textAlign: 'center' }}>
+                <WarningAmberIcon sx={{ fontSize: 80, color: 'white', mb: 2 }} />
+                <Typography variant="h6" align="center" color="white" fontWeight="bold" gutterBottom>
+                  {errorMessage}
+                </Typography>
+                <Button 
+                  onClick={() => {
+                    setErrorMessage('');
+                    setScanMode(false);
+                  }}
+                  variant="contained" 
+                  color="inherit"
+                  sx={{ mt: 2 }}
+                >
+                  Zurück
+                </Button>
+              </Box>
+            </Fade>
+          ) : scanSuccess ? (
             // Erfolgsmeldung nach erfolgreichem Scan
             <Fade in={scanSuccess}>
               <Box sx={{ textAlign: 'center' }}>
@@ -410,6 +482,43 @@ const UpdateLabResultsDialog = ({
           sx={{ mb: 2 }}
         />
         
+        {/* NEU: Raum-Auswahl - nur Labor-Räume */}
+        <FormControl fullWidth margin="dense" sx={{ mb: 2 }} required>
+          <InputLabel id="room-label">Labor-Raum *</InputLabel>
+          <Select
+            labelId="room-label"
+            id="room"
+            value={roomId}
+            onChange={(e) => setRoomId(e.target.value)}
+            label="Labor-Raum *"
+            required
+          >
+            <MenuItem value="">
+              <em>Bitte Labor auswählen</em>
+            </MenuItem>
+            {labRooms.map((room) => (
+              <MenuItem key={room.id} value={room.id}>
+                {room.name}
+                {!room.unifi_device_id && (
+                  <Typography variant="caption" color="error" sx={{ ml: 1 }}>
+                    (kein RFID)
+                  </Typography>
+                )}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        
+        {/* Warnung wenn Raum kein RFID-Gerät hat */}
+        {roomId && !selectedRoomHasRfid() && (
+          <Alert severity="warning" sx={{ mt: 1, mb: 2 }}>
+            <Typography variant="body2">
+              Der ausgewählte Raum hat kein zugeordnetes RFID-Gerät. 
+              Bitte wählen Sie einen anderen Raum oder kontaktieren Sie den Administrator.
+            </Typography>
+          </Alert>
+        )}
+        
         <TextField
           margin="dense"
           id="lab-notes"
@@ -433,7 +542,7 @@ const UpdateLabResultsDialog = ({
           }}
         >
           <Typography variant="body2">
-            <strong>Hinweis:</strong> Die Zuordnung des verantwortlichen Mitglieds erfolgt automatisch per RFID-Autorisierung.
+            <strong>Hinweis:</strong> Die Zuordnung des verantwortlichen Mitglieds erfolgt automatisch per RFID-Autorisierung am Gerät des Zielraums.
           </Typography>
         </Box>
         
@@ -452,7 +561,7 @@ const UpdateLabResultsDialog = ({
           onClick={startRfidScan}
           variant="contained" 
           color="info"
-          disabled={loading}
+          disabled={loading || !selectedRoomHasRfid()}
           startIcon={loading ? <CircularProgress size={16} /> : <BiotechIcon />}
         >
           Mit RFID autorisieren & aktualisieren

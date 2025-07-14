@@ -42,6 +42,7 @@ import CalculateIcon from '@mui/icons-material/Calculate';
 import EuroIcon from '@mui/icons-material/Euro';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import api from '@/utils/api';
 
 const EnhancedConvertToPackagingDialog = ({
@@ -96,6 +97,7 @@ const EnhancedConvertToPackagingDialog = ({
   const [isAborting, setIsAborting] = useState(false);
   const [memberId, setMemberId] = useState('');
   const [memberIdFromRfid, setMemberIdFromRfid] = useState(null);
+  const [errorMessage, setErrorMessage] = useState('');
   
   // Debug Flag
   const DEBUG = true;
@@ -124,8 +126,8 @@ const EnhancedConvertToPackagingDialog = ({
       setRemainingWeight(weight);
       setNotes(`Verpackung in verschiedenen Einheitsgrößen. Verbleibende Restmenge wird vorschriftsgemäß vernichtet.`);
       setMemberId('');
-      setRoomId('');
       setError('');
+      setErrorMessage('');
       setTotalPackages(0);
       setTotalPackagedWeight(0);
       
@@ -141,8 +143,18 @@ const EnhancedConvertToPackagingDialog = ({
       setMemberIdFromRfid(null);
       setAbortController(null);
       setIsAborting(false);
+      
+      // Raum-Logik: Filtere nur Verpackungsräume
+      const packagingRooms = rooms?.filter(room => room.room_type === 'verpackung') || [];
+      
+      // Wenn nur ein Verpackungsraum vorhanden ist, automatisch auswählen
+      if (packagingRooms.length === 1) {
+        setRoomId(packagingRooms[0].id);
+      } else {
+        setRoomId('');
+      }
     }
-  }, [open, labTesting]);
+  }, [open, labTesting, rooms]);
   
   // Berechne Totals und Restmenge, wenn sich Verpackungslinien ändern
   useEffect(() => {
@@ -378,6 +390,7 @@ const EnhancedConvertToPackagingDialog = ({
   const startRfidScan = async () => {
     setScanMode(true);
     setScanSuccess(false);
+    setErrorMessage('');
     await handleRfidScan();
   };
 
@@ -385,16 +398,28 @@ const EnhancedConvertToPackagingDialog = ({
   const handleRfidScan = async () => {
     if (isAborting) return;
     
+    // Device ID aus dem ausgewählten Raum holen
+    const selectedRoom = rooms?.find(r => r.id === roomId);
+    const deviceId = selectedRoom?.unifi_device_id;
+    
+    if (!deviceId) {
+      setErrorMessage('⚠️ Der ausgewählte Raum hat kein zugeordnetes RFID-Gerät!');
+      setScanMode(false);
+      return;
+    }
+    
     const controller = new AbortController();
     setAbortController(controller);
     setLoading(true);
     
     try {
-      console.log("🚀 Starte RFID-Scan für Verpackungserstellung...");
+      console.log(`🚀 Starte RFID-Scan für Verpackungserstellung mit Device ID: ${deviceId} (Raum: ${selectedRoom.name})...`);
       
       if (isAborting) return;
       
+      // MIT device_id
       const bindRes = await api.get('/unifi_api_debug/bind-rfid-session/', {
+        params: { device_id: deviceId },
         signal: controller.signal
       });
       
@@ -433,7 +458,7 @@ const EnhancedConvertToPackagingDialog = ({
         console.log('RFID-Scan wurde abgebrochen');
       } else {
         console.error('RFID-Bindungsfehler:', error);
-        alert(error.response?.data?.detail || error.message || 'RFID-Verifizierung fehlgeschlagen');
+        setErrorMessage(error.response?.data?.detail || error.message || 'RFID-Verifizierung fehlgeschlagen');
       }
       
       if (!isAborting) {
@@ -464,6 +489,7 @@ const EnhancedConvertToPackagingDialog = ({
       setLoading(false);
       setScanSuccess(false);
       setScannedMemberName('');
+      setErrorMessage('');
       
       setTimeout(() => {
         setIsAborting(false);
@@ -477,6 +503,7 @@ const EnhancedConvertToPackagingDialog = ({
     setScanSuccess(false);
     setScannedMemberName('');
     setMemberIdFromRfid(null);
+    setErrorMessage('');
     
     if (onClose) {
       onClose();
@@ -625,6 +652,15 @@ const EnhancedConvertToPackagingDialog = ({
     onConvert(formData);
   };
 
+  // Prüfen ob der ausgewählte Raum ein RFID-Gerät hat
+  const selectedRoomHasRfid = () => {
+    const room = rooms?.find(r => r.id === roomId);
+    return room?.unifi_device_id ? true : false;
+  };
+
+  // Nur Verpackungsräume filtern
+  const packagingRooms = rooms?.filter(room => room.room_type === 'verpackung') || [];
+
   return (
     <Dialog 
       open={open}
@@ -636,18 +672,16 @@ const EnhancedConvertToPackagingDialog = ({
           handleDialogClose();
         }
       }}
-      fullWidth
-      maxWidth={false}
+      fullScreen
       disableEscapeKeyDown
+      TransitionProps={{
+        style: { backgroundColor: 'rgba(0, 0, 0, 0.5)' }
+      }}
       PaperProps={{
         sx: { 
           position: 'relative',
           overflow: scanMode ? 'hidden' : 'visible',
-          // 🎯 OPTIMIERT FÜR 1920x1080 - MEHR PLATZ GENUTZT
-          width: '95vw',
-          height: '88vh',
-          maxWidth: '1820px',
-          maxHeight: '940px'
+          backgroundColor: '#fafafa'
         }
       }}
     >
@@ -659,7 +693,7 @@ const EnhancedConvertToPackagingDialog = ({
           left: 0,
           right: 0,
           bottom: 0,
-          bgcolor: 'success.light',
+          bgcolor: scanSuccess ? 'success.light' : errorMessage ? 'error.light' : 'success.light',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
@@ -684,7 +718,28 @@ const EnhancedConvertToPackagingDialog = ({
             </Button>
           )}
           
-          {scanSuccess ? (
+          {errorMessage ? (
+            // Fehlermeldung anzeigen
+            <Fade in={!!errorMessage}>
+              <Box sx={{ textAlign: 'center' }}>
+                <WarningAmberIcon sx={{ fontSize: 80, color: 'white', mb: 2 }} />
+                <Typography variant="h6" align="center" color="white" fontWeight="bold" gutterBottom>
+                  {errorMessage}
+                </Typography>
+                <Button 
+                  onClick={() => {
+                    setErrorMessage('');
+                    setScanMode(false);
+                  }}
+                  variant="contained" 
+                  color="inherit"
+                  sx={{ mt: 2 }}
+                >
+                  Zurück
+                </Button>
+              </Box>
+            </Fade>
+          ) : scanSuccess ? (
             <Fade in={scanSuccess}>
               <Box sx={{ textAlign: 'center' }}>
                 <Zoom in={scanSuccess}>
@@ -766,48 +821,48 @@ const EnhancedConvertToPackagingDialog = ({
         <DialogContent 
           dividers 
           sx={{ 
-            p: 2,
-            height: 'calc(88vh - 160px)',
+            p: 3,
+            height: 'calc(100vh - 120px)',
             overflow: 'hidden'
           }}
         >
           <Box sx={{ display: 'flex', width: '100%', height: '100%', gap: 2 }}>
             
-            {/* 🎯 LINKE SPALTE - VERGRÖSSERT */}
-            <Box sx={{ width: '360px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+            {/* 🎯 LINKE SPALTE - FULLSCREEN OPTIMIERT */}
+            <Box sx={{ width: '420px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
               
-              {/* Laborkontrolle-Information - VERGRÖSSERT */}
+              {/* Laborkontrolle-Information - FULLSCREEN */}
               {labTesting && (
-                <Paper sx={{ p: 1.5, bgcolor: 'background.paper' }}>
-                  <Typography variant="subtitle2" color="textSecondary" sx={{ fontSize: '0.85rem', mb: 1, fontWeight: 'bold' }}>
+                <Paper sx={{ p: 2, bgcolor: 'background.paper' }}>
+                  <Typography variant="subtitle2" color="textSecondary" sx={{ fontSize: '0.95rem', mb: 1.5, fontWeight: 'bold' }}>
                     Laborkontrolle-Information
                   </Typography>
-                  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, fontSize: '0.8rem' }}>
-                    <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.8rem' }}>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, fontSize: '0.9rem' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.9rem' }}>
                       Genetik:
                     </Typography>
-                    <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                    <Typography variant="body2" sx={{ fontSize: '0.9rem' }}>
                       {labTesting.source_strain || "Unbekannt"}
                     </Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.8rem' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.9rem' }}>
                       THC-Gehalt:
                     </Typography>
-                    <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                    <Typography variant="body2" sx={{ fontSize: '0.9rem' }}>
                       {labTesting.thc_content ? `${labTesting.thc_content}%` : "Nicht getestet"}
                     </Typography>
                   </Box>
                   <Box sx={{ 
                     display: 'flex', 
                     justifyContent: 'space-between', 
-                    p: 1, 
+                    p: 1.5, 
                     bgcolor: 'info.lighter', 
                     borderRadius: 1, 
-                    mt: 1 
+                    mt: 1.5 
                   }}>
-                    <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.8rem' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.9rem' }}>
                       Verfügbares Gewicht:
                     </Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.8rem' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.9rem' }}>
                       {availableWeight.toFixed(3)}g
                     </Typography>
                   </Box>
@@ -872,26 +927,48 @@ const EnhancedConvertToPackagingDialog = ({
                 )}
               </Paper>
               
-              {/* Raum-Auswahl - VERGRÖSSERT */}
+              {/* Raum-Auswahl - NUR VERPACKUNGSRÄUME */}
               <FormControl fullWidth size="small">
-                <InputLabel id="room-label" sx={{ fontSize: '0.9rem' }}>Raum</InputLabel>
+                <InputLabel id="room-label" sx={{ fontSize: '0.9rem' }}>Verpackungsraum *</InputLabel>
                 <Select
                   labelId="room-label"
                   id="room"
                   value={roomId}
                   onChange={(e) => setRoomId(e.target.value)}
-                  label="Raum"
+                  label="Verpackungsraum *"
                   required
                   disabled={loadingOptions}
                   sx={{ fontSize: '0.9rem' }}
                 >
-                  {rooms.map((room) => (
+                  <MenuItem value="">
+                    <em>Bitte Verpackungsraum auswählen</em>
+                  </MenuItem>
+                  {packagingRooms.map((room) => (
                     <MenuItem key={room.id} value={room.id} sx={{ fontSize: '0.9rem' }}>
                       {room.name}
+                      {!room.unifi_device_id && (
+                        <Typography variant="caption" color="error" sx={{ ml: 1 }}>
+                          (kein RFID)
+                        </Typography>
+                      )}
                     </MenuItem>
                   ))}
                 </Select>
               </FormControl>
+              
+              {/* Warnung wenn Raum kein RFID-Gerät hat */}
+              {roomId && !selectedRoomHasRfid() && (
+                <Alert severity="warning" sx={{ 
+                  py: 1,
+                  '& .MuiAlert-message': { fontSize: '0.8rem' },
+                  '& .MuiAlert-icon': { fontSize: '1.2rem' }
+                }}>
+                  <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                    Der ausgewählte Raum hat kein zugeordnetes RFID-Gerät. 
+                    Bitte wählen Sie einen anderen Raum oder kontaktieren Sie den Administrator.
+                  </Typography>
+                </Alert>
+              )}
               
               {/* Notizen - VERGRÖSSERT */}
               <TextField
@@ -1183,7 +1260,7 @@ const EnhancedConvertToPackagingDialog = ({
           }}>
             <CreditCardIcon sx={{ mr: 1, color: 'info.main', fontSize: '1.1rem' }} />
             <Typography variant="body2" sx={{ fontSize: '0.8rem', textAlign: 'center' }}>
-              <strong>Hinweis:</strong> Zuordnung per RFID-Autorisierung. Preise inkl. 19% MwSt. 
+              <strong>Hinweis:</strong> Zuordnung per RFID-Autorisierung am Gerät des Zielraums. Preise inkl. 19% MwSt. 
               Max. 5 Verpackungsgrößen empfohlen - bei mehr erscheint automatisch ein Scrollbalken.
             </Typography>
           </Box>
@@ -1200,7 +1277,7 @@ const EnhancedConvertToPackagingDialog = ({
             color="success"
             size="medium"
             startIcon={loading ? <CircularProgress size={16} /> : <AttachMoneyIcon />}
-            disabled={loading || totalPackagedWeight <= 0 || !roomId || !pricePerGram || parseFloat(pricePerGram) <= 0}
+            disabled={loading || totalPackagedWeight <= 0 || !roomId || !pricePerGram || parseFloat(pricePerGram) <= 0 || !selectedRoomHasRfid()}
             sx={{ fontSize: '0.9rem', px: 3 }}
           >
             Mit RFID autorisieren & Verpackungen erstellen

@@ -581,6 +581,7 @@ export default function LabTestingPage() {
         onClose={() => setOpenUpdateLabResultsDialog(false)}
         onUpdateLabResults={handleUpdateLabResults}
         labTesting={selectedLabTesting}
+        rooms={rooms}
       />
       
       {/* Konvertierung zu Verpackung - Erweiterte Version */}

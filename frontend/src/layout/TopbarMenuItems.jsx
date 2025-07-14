@@ -96,7 +96,7 @@ const TopbarMenuItems = [
         subtitle: 'Zentrale Steuerungsübersicht'
       },
       { 
-        label: 'Raumliste', 
+        label: 'Raumverwaltung', 
         path: '/rooms', 
         icon: <CategoryIcon />,
         subtitle: 'Übersicht aller verfügbaren Räume'

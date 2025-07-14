@@ -227,6 +227,31 @@ Die verbleibenden Schritte (6–10) erhalten die gleiche Multimedia-Anbindung su
 
 ---
 
+## 🔧UniFi Protect Sensoren – Automatisiertes Raumklima-Monitoring für Cannabis Track & Trace 
+
+<p align="center">
+  <img src="screenshots/unifi_protect/sensoren_history.png" alt="Vorschau" width="1920">
+</p>
+
+Unsere Plattform unterstützt ab sofort die neueste Generation der UniFi Protect Sensoren (UP-Sense), vollständig integriert und zukunftssicher dank SuperLink-Architektur. Damit bieten wir als erste Softwarelösung ein nahtloses, GMP-konformes Monitoring für Temperatur, Luftfeuchtigkeit, Licht und mehr – direkt in allen sensiblen Produktionsbereichen.
+
+# Was macht das Feature so einzigartig?
+
+✅ Native Anbindung an UniFi Protect 6.0 mit AI-gestütztem Monitoring
+✅ Echtzeit-Status und lückenlose Historisierung aller Sensorwerte für EU-GMP/BfArM Compliance & Audits
+✅ SuperLink-Ready: Bereits vorbereitet auf kommende Langstrecken-Sensoren (2km Reichweite) – keine Codeänderungen bei Umrüstung nötig
+✅ Multi-Sensor-Überwachung mit intelligentem Alarm- und Konfliktmanagement
+✅ Automatischer Datenexport und PDF-Reports für Behördeninspektionen
+✅ Touch-optimiertes Frontend mit Live-Status, Signalstärke, Quick-Ranges & leistungsfähigen Charts
+
+# Typische Anwendungsbereiche:
+
+✅ Präzise Klimasteuerung in Blütekammern, Trocknungsräumen und Lagerbereichen
+✅ Explosionsschutz-Monitoring im Extraktionslabor
+✅ Manipulationssichere Speicherung aller Werte für maximale Nachvollziehbarkeit
+
+Mit dieser Integration setzt ihr auf Industrie-Standards und maximale Skalierbarkeit: Ob kleine Räume via Bluetooth oder künftig ganze Lagerhallen per SuperLink – unser System ist bereit!
+
 ## 🔧 Integration & Automatisierung
 
 <p align="center">

@@ -211,19 +211,25 @@ Jeder Schritt wird über die Mitarbeiterkonten per RFID/NFC bestätigt und in Ec
   <img src="screenshots/trackandtrace/track_and_trace.png" alt="Vorschau" width="1920">
 </p>
 
-Multimedia-Unterstützung im Track&Trace-Modul
+Multimedia-Support im Track&Trace-Modul
 
-Das Track&Trace-System unterstützt ab sofort die Upload- und Zuordnung von Multimedia-Dateien (Bilder und Videos) zu den jeweiligen Arbeitsschritten einzelner Chargen. Die Implementierung ist derzeit für die Schritte 1 bis 5 produktiv freigeschaltet:
+Das Track & Trace-System unterstützt ab sofort die Upload- und Zuordnung von Multimedia-Dateien (Bilder und Videos) zu den jeweiligen Arbeitsschritten einzelner Chargen. Die Implementierung ist derzeit für die Schritte 1 bis 5 produktiv freigeschaltet:
 
 ✅ Schritt 1: Sameneinkauf (SeedPurchase)
 ✅ Schritt 2: Mutterpflanzen (MotherPlantBatch)
 ✅ Schritt 3: Blühpflanzen aus Samen (FloweringPlantBatch)
 ✅ Schritt 4: Stecklinge (CuttingBatch)
 ✅ Schritt 5: Blühpflanzen aus Stecklingen (BloomingCuttingBatch)
+✅ Schritt 6: Ernte
+✅ Schritt 7: Trocknung
+✅ Schritt 8: Verarbeitung
+✅ Schritt 9: Laborkontrolle
+✅ Schritt 10: Verpackung
+✅ Schritt 11: Produktausgabe
+
+✅ Zusätzlich: Multimedia Verwaltung, Cannabis Bewertung & Vernichtung.
 
 Die Dateien werden backend-seitig sicher gespeichert und sind nur innerhalb des geschlossenen Vereinsnetzwerks zugänglich. Zusätzlich wurden serverseitige Hooks vorbereitet, um Inhalte optional automatisiert in verifizierten, privaten Facebook-Gruppen zu teilen, die ausschließlich aus zuvor freigegebenen Vereinsmitgliedern bestehen.
-
-Die verbleibenden Schritte (6–10) erhalten die gleiche Multimedia-Anbindung sukzessive im Rahmen der weiteren Modulentwicklung.
 
 ---
 
@@ -235,7 +241,7 @@ Die verbleibenden Schritte (6–10) erhalten die gleiche Multimedia-Anbindung su
 
 Unsere Plattform unterstützt ab sofort die neueste Generation der UniFi Protect Sensoren (UP-Sense), vollständig integriert und zukunftssicher dank SuperLink-Architektur. Damit bieten wir als erste Softwarelösung ein nahtloses, GMP-konformes Monitoring für Temperatur, Luftfeuchtigkeit, Licht und mehr – direkt in allen sensiblen Produktionsbereichen.
 
-# Was macht das Feature so einzigartig?
+## Was macht das Feature so einzigartig?
 
 ✅ Native Anbindung an UniFi Protect 6.0 mit AI-gestütztem Monitoring
 ✅ Echtzeit-Status und lückenlose Historisierung aller Sensorwerte für EU-GMP/BfArM Compliance & Audits
@@ -244,7 +250,7 @@ Unsere Plattform unterstützt ab sofort die neueste Generation der UniFi Protect
 ✅ Automatischer Datenexport und PDF-Reports für Behördeninspektionen
 ✅ Touch-optimiertes Frontend mit Live-Status, Signalstärke, Quick-Ranges & leistungsfähigen Charts
 
-# Typische Anwendungsbereiche:
+## Typische Anwendungsbereiche:
 
 ✅ Präzise Klimasteuerung in Blütekammern, Trocknungsräumen und Lagerbereichen
 ✅ Explosionsschutz-Monitoring im Extraktionslabor

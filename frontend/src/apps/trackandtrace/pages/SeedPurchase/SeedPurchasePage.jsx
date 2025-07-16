@@ -1,12 +1,11 @@
 // frontend/src/apps/trackandtrace/pages/SeedPurchase/SeedPurchasePage.jsx
 import { useState, useEffect } from 'react'
-import { Container, Button, Box, Typography, Fade, Snackbar, Alert } from '@mui/material'
+import { Box, Typography, Fade, Snackbar, Alert, alpha, Button } from '@mui/material'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
+import FilterListIcon from '@mui/icons-material/FilterList'
 import api from '@/utils/api'
 
 // Gemeinsame Komponenten
-import PageHeader from '@/components/common/PageHeader'
-import FilterSection from '@/components/common/FilterSection'
 import TabsHeader from '@/components/common/TabsHeader'
 import LoadingIndicator from '@/components/common/LoadingIndicator'
 import AnimatedTabPanel from '@/components/common/AnimatedTabPanel'
@@ -720,165 +719,276 @@ export default function SeedPurchasePage() {
     }
   ];
 
+  // Gemeinsame Styles für AnimatedTabPanel
+  const tabPanelStyles = {
+    height: '100%', 
+    p: 0,
+    m: 0,
+    mt: 0, // Explizit kein margin-top
+    pt: 0, // Explizit kein padding-top
+    '& > div': { // Direktes Kind-Div von AnimatedTabPanel
+      height: '100%',
+      margin: 0,
+      marginTop: 0,
+      padding: 0,
+      paddingTop: 0
+    },
+    '& > div > div': { // Zweite Ebene für sicheres Styling
+      marginTop: 0,
+      paddingTop: 0
+    },
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden'
+  };
+
   return (
-    <Container maxWidth="xl" sx={{ width: '100%' }}>
-      <Fade in={true} timeout={800}>
-        <Box>
-          <PageHeader 
-            title="Track & Trace Verwaltung: Step 1 - (Samenbeschaffung)"
-            showFilters={showFilters}
-            setShowFilters={setShowFilters}
-            actions={
-              tabValue === 0 && (
-                <Button 
-                  variant="contained" 
-                  color="success"
-                  onClick={() => {
-                    setSelectedSeed(null)
-                    setOpenForm(true)
-                  }}
-                >
-                  NEUER SAMEN EINKAUF
-                </Button>
-              )
+    <Box sx={{ 
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden'
+    }}>
+      {/* Header mit Titel */}
+      <Box sx={{ 
+        p: 2, 
+        bgcolor: 'background.paper',
+        borderBottom: theme => `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }}>
+        <Typography variant="h5" sx={{ fontWeight: 500 }}>
+          Track & Trace Verwaltung: Step 1 - (Samenbeschaffung)
+        </Typography>
+        
+        {/* Filter-Button oben rechts */}
+        <Box
+          sx={{
+            border: theme => `1px solid ${alpha(theme.palette.divider, 0.3)}`,
+            borderRadius: '4px',
+            p: 0.75,
+            display: 'inline-flex',
+            alignItems: 'center',
+            backgroundColor: 'background.paper',
+            '&:hover': {
+              backgroundColor: theme => alpha(theme.palette.action.hover, 0.08),
+              borderColor: theme => theme.palette.divider
             }
-          />
+          }}
+        >
+          <Button 
+            variant="text" 
+            color="inherit" 
+            onClick={() => setShowFilters(!showFilters)}
+            startIcon={<FilterListIcon />}
+            sx={{ 
+              textTransform: 'none', 
+              color: 'text.primary',
+              fontSize: '0.875rem'
+            }}
+          >
+            {showFilters ? 'Filter ausblenden' : 'Filter anzeigen'}
+          </Button>
         </Box>
-      </Fade>
-      
-      <Fade in={showFilters} timeout={400}>
-        <Box sx={{ display: showFilters ? 'block' : 'none' }}>
-          <FilterSection
-            yearFilter={yearFilter}
-            setYearFilter={setYearFilter}
-            monthFilter={monthFilter}
-            setMonthFilter={setMonthFilter}
-            dayFilter={dayFilter}
-            setDayFilter={setDayFilter}
-            onApply={handleFilterApply}
-            onReset={handleFilterReset}
-            showFilters={showFilters}
-          />
-        </Box>
-      </Fade>
+      </Box>
 
-      <TabsHeader 
-        tabValue={tabValue} 
-        onTabChange={handleTabChange} 
-        tabs={tabs}
-        color="success"
-        ariaLabel="Samen-Tabs"
-      />
+      {/* Tabs - direkt anschließend ohne Lücke */}
+      <Box sx={{ flexShrink: 0 }}>
+        <TabsHeader 
+          tabValue={tabValue} 
+          onTabChange={handleTabChange} 
+          tabs={tabs}
+          color="success"
+          ariaLabel="Samen-Tabs"
+        />
+      </Box>
 
-      {loading ? (
-        <LoadingIndicator />
-      ) : (
-        <>
-          <AnimatedTabPanel 
-            value={tabValue} 
-            index={0} 
-            animationType={animSettings.type} 
-            direction="right" 
-            duration={animSettings.duration}
-          >
-            <SeedTable 
-              tabValue={0}
-              data={displayedData}
-              expandedSeedId={expandedSeedId}
-              onExpandSeed={handleAccordionChange}
-              onOpenConvertDialog={handleOpenConvertDialog}
-              onOpenDestroyDialog={handleOpenDestroyDialog}
-              onOpenEditForm={handleOpenEditForm}
-              onOpenImageModal={handleOpenImageModal}
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={handlePageChange}
-              pageSize={pageSize}
-              onPageSizeChange={handlePageSizeChange}
-              pageSizeOptions={pageSizeOptions}
-              totalCount={totalCount}
-            />
-          </AnimatedTabPanel>
+      {/* Hauptinhalt mit Scroll */}
+      <Box sx={{ 
+        flex: 1, 
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden', // Wichtig: Container selbst nicht scrollen
+        position: 'relative'
+      }}>
+        {loading ? (
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            height: '100%'
+          }}>
+            <LoadingIndicator />
+          </Box>
+        ) : (
+          <Box sx={{ 
+            height: '100%', 
+            display: 'flex', 
+            flexDirection: 'column',
+            overflow: 'hidden' // Kein Scroll hier
+          }}>
+            <AnimatedTabPanel 
+              value={tabValue} 
+              index={0} 
+              animationType={animSettings.type} 
+              direction="right" 
+              duration={animSettings.duration}
+              sx={{ 
+                height: '100%', 
+                p: 0,
+                m: 0, // Kein Margin
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden'
+              }}
+            >
+              <SeedTable 
+                tabValue={0}
+                data={displayedData}
+                expandedSeedId={expandedSeedId}
+                onExpandSeed={handleAccordionChange}
+                onOpenConvertDialog={handleOpenConvertDialog}
+                onOpenDestroyDialog={handleOpenDestroyDialog}
+                onOpenEditForm={handleOpenEditForm}
+                onOpenImageModal={handleOpenImageModal}
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+                pageSize={pageSize}
+                onPageSizeChange={handlePageSizeChange}
+                pageSizeOptions={pageSizeOptions}
+                totalCount={totalCount}
+                yearFilter={yearFilter}
+                setYearFilter={setYearFilter}
+                monthFilter={monthFilter}
+                setMonthFilter={setMonthFilter}
+                dayFilter={dayFilter}
+                setDayFilter={setDayFilter}
+                showFilters={showFilters}
+                setShowFilters={setShowFilters}
+                onFilterApply={handleFilterApply}
+                onFilterReset={handleFilterReset}
+              />
+            </AnimatedTabPanel>
 
-          <AnimatedTabPanel 
-            value={tabValue} 
-            index={1} 
-            animationType={animSettings.type} 
-            direction="up" 
-            duration={animSettings.duration}
-          >
-            <SeedTable 
-              tabValue={1}
-              data={displayedData}
-              expandedSeedId={expandedSeedId}
-              onExpandSeed={handleAccordionChange}
-              onOpenConvertDialog={handleOpenConvertDialog}
-              onOpenDestroyDialog={handleOpenDestroyDialog}
-              onOpenEditForm={handleOpenEditForm}
-              onOpenImageModal={handleOpenImageModal}
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={handlePageChange}
-              pageSize={pageSize}
-              onPageSizeChange={handlePageSizeChange}
-              pageSizeOptions={pageSizeOptions}
-              totalCount={totalCount}
-            />
-          </AnimatedTabPanel>
+            <AnimatedTabPanel 
+              value={tabValue} 
+              index={1} 
+              animationType={animSettings.type} 
+              direction="up" 
+              duration={animSettings.duration}
+              sx={{ height: '100%', p: 0 }}
+            >
+              <SeedTable 
+                tabValue={1}
+                data={displayedData}
+                expandedSeedId={expandedSeedId}
+                onExpandSeed={handleAccordionChange}
+                onOpenConvertDialog={handleOpenConvertDialog}
+                onOpenDestroyDialog={handleOpenDestroyDialog}
+                onOpenEditForm={handleOpenEditForm}
+                onOpenImageModal={handleOpenImageModal}
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+                pageSize={pageSize}
+                onPageSizeChange={handlePageSizeChange}
+                pageSizeOptions={pageSizeOptions}
+                totalCount={totalCount}
+                yearFilter={yearFilter}
+                setYearFilter={setYearFilter}
+                monthFilter={monthFilter}
+                setMonthFilter={setMonthFilter}
+                dayFilter={dayFilter}
+                setDayFilter={setDayFilter}
+                showFilters={showFilters}
+                setShowFilters={setShowFilters}
+                onFilterApply={handleFilterApply}
+                onFilterReset={handleFilterReset}
+              />
+            </AnimatedTabPanel>
 
-          <AnimatedTabPanel 
-            value={tabValue} 
-            index={2} 
-            animationType={animSettings.type} 
-            direction="up" 
-            duration={animSettings.duration}
-          >
-            <SeedTable 
-              tabValue={2}
-              data={displayedData}
-              expandedSeedId={expandedSeedId}
-              onExpandSeed={handleAccordionChange}
-              onOpenConvertDialog={handleOpenConvertDialog}
-              onOpenDestroyDialog={handleOpenDestroyDialog}
-              onOpenEditForm={handleOpenEditForm}
-              onOpenImageModal={handleOpenImageModal}
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={handlePageChange}
-              pageSize={pageSize}
-              onPageSizeChange={handlePageSizeChange}
-              pageSizeOptions={pageSizeOptions}
-              totalCount={totalCount}
-            />
-          </AnimatedTabPanel>
+            <AnimatedTabPanel 
+              value={tabValue} 
+              index={2} 
+              animationType={animSettings.type} 
+              direction="up" 
+              duration={animSettings.duration}
+              sx={{ height: '100%' }}
+            >
+              <SeedTable 
+                tabValue={2}
+                data={displayedData}
+                expandedSeedId={expandedSeedId}
+                onExpandSeed={handleAccordionChange}
+                onOpenConvertDialog={handleOpenConvertDialog}
+                onOpenDestroyDialog={handleOpenDestroyDialog}
+                onOpenEditForm={handleOpenEditForm}
+                onOpenImageModal={handleOpenImageModal}
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+                pageSize={pageSize}
+                onPageSizeChange={handlePageSizeChange}
+                pageSizeOptions={pageSizeOptions}
+                totalCount={totalCount}
+                yearFilter={yearFilter}
+                setYearFilter={setYearFilter}
+                monthFilter={monthFilter}
+                setMonthFilter={setMonthFilter}
+                dayFilter={dayFilter}
+                setDayFilter={setDayFilter}
+                showFilters={showFilters}
+                setShowFilters={setShowFilters}
+                onFilterApply={handleFilterApply}
+                onFilterReset={handleFilterReset}
+              />
+            </AnimatedTabPanel>
 
-          <AnimatedTabPanel 
-            value={tabValue} 
-            index={3} 
-            animationType={animSettings.type} 
-            direction="left" 
-            duration={animSettings.duration}
-          >
-            <SeedTable 
-              tabValue={3}
-              data={displayedData}
-              expandedSeedId={expandedSeedId}
-              onExpandSeed={handleAccordionChange}
-              onOpenConvertDialog={handleOpenConvertDialog}
-              onOpenDestroyDialog={handleOpenDestroyDialog}
-              onOpenEditForm={handleOpenEditForm}
-              onOpenImageModal={handleOpenImageModal}
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={handlePageChange}
-              pageSize={pageSize}
-              onPageSizeChange={handlePageSizeChange}
-              pageSizeOptions={pageSizeOptions}
-              totalCount={totalCount}
-            />
-          </AnimatedTabPanel>
-        </>
-      )}
+            <AnimatedTabPanel 
+              value={tabValue} 
+              index={3} 
+              animationType={animSettings.type} 
+              direction="left" 
+              duration={animSettings.duration}
+              sx={{ height: '100%' }}
+            >
+              <SeedTable 
+                tabValue={3}
+                data={displayedData}
+                expandedSeedId={expandedSeedId}
+                onExpandSeed={handleAccordionChange}
+                onOpenConvertDialog={handleOpenConvertDialog}
+                onOpenDestroyDialog={handleOpenDestroyDialog}
+                onOpenEditForm={handleOpenEditForm}
+                onOpenImageModal={handleOpenImageModal}
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+                pageSize={pageSize}
+                onPageSizeChange={handlePageSizeChange}
+                pageSizeOptions={pageSizeOptions}
+                totalCount={totalCount}
+                yearFilter={yearFilter}
+                setYearFilter={setYearFilter}
+                monthFilter={monthFilter}
+                setMonthFilter={setMonthFilter}
+                dayFilter={dayFilter}
+                setDayFilter={setDayFilter}
+                showFilters={showFilters}
+                setShowFilters={setShowFilters}
+                onFilterApply={handleFilterApply}
+                onFilterReset={handleFilterReset}
+              />
+            </AnimatedTabPanel>
+          </Box>
+        )}
+      </Box>
 
       <Fade in={openForm} timeout={500}>
         <div style={{ display: openForm ? 'block' : 'none' }}>
@@ -967,6 +1077,6 @@ export default function SeedPurchasePage() {
           {globalSnackbar.message}
         </Alert>
       </Snackbar>
-    </Container>
+    </Box>
   )
 }

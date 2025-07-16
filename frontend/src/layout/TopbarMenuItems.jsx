@@ -85,37 +85,6 @@ const TopbarMenuItems = [
     ]
   },
   {
-    id: 'showGrowControl',
-    label: 'Grow Control', 
-    icon: <MonitorHeartIcon />,
-    children: [
-      { 
-        label: 'S7 Grow Controller', 
-        path: '/controller', 
-        icon: <DashboardIcon />,
-        subtitle: 'Zentrale Steuerungsübersicht'
-      },
-      { 
-        label: 'Raumverwaltung', 
-        path: '/rooms', 
-        icon: <CategoryIcon />,
-        subtitle: 'Übersicht aller verfügbaren Räume'
-      },
-      { 
-        label: 'Elemente-Bibliothek', 
-        path: '/rooms/item-types', 
-        icon: <CategoryIcon />,
-        subtitle: 'Verwaltung der Raumelemente'
-      },
-      { 
-        label: 'Raumdesigner', 
-        path: '/rooms', 
-        icon: <DashboardCustomizeIcon />, 
-        subtitle: 'Wähle zuerst einen Raum aus der Liste' 
-      }
-    ]
-  },
-  {
     id: 'showTrackTrace', 
     label: 'Track & Trace', 
     icon: <TimelineIcon />, 
@@ -210,6 +179,37 @@ const TopbarMenuItems = [
         path: '/trace/compliance', 
         icon: <VerifiedUserIcon />,
         subtitle: 'Behördliche Anforderungen'
+      }
+    ]
+  },
+    {
+    id: 'showGrowControl',
+    label: 'Grow Control', 
+    icon: <MonitorHeartIcon />,
+    children: [
+      { 
+        label: 'S7 Grow Controller', 
+        path: '/controller', 
+        icon: <DashboardIcon />,
+        subtitle: 'Zentrale Steuerungsübersicht'
+      },
+      { 
+        label: 'Raumverwaltung', 
+        path: '/rooms', 
+        icon: <CategoryIcon />,
+        subtitle: 'Übersicht aller verfügbaren Räume'
+      },
+      { 
+        label: 'Elemente-Bibliothek', 
+        path: '/rooms/item-types', 
+        icon: <CategoryIcon />,
+        subtitle: 'Verwaltung der Raumelemente'
+      },
+      { 
+        label: 'Raumdesigner', 
+        path: '/rooms', 
+        icon: <DashboardCustomizeIcon />, 
+        subtitle: 'Wähle zuerst einen Raum aus der Liste' 
       }
     ]
   },

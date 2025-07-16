@@ -19,7 +19,7 @@ import {
   CardContent
 } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
-import api from '@/utils/api'
+import api from '../../../../utils/api'
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'
 import CreditCardIcon from '@mui/icons-material/CreditCard'
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'

@@ -1,42 +1,28 @@
 // frontend/src/apps/trackandtrace/pages/ProductDistribution/ProductDistributionPage.jsx
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Container, Box, Typography, Fade, Paper, Tabs, Tab } from '@mui/material'
+import { Box, Typography, Fade, Paper, Tabs, Tab, alpha, Button } from '@mui/material'
 import LocalShippingIcon from '@mui/icons-material/LocalShipping'
 import HistoryIcon from '@mui/icons-material/History'
 import AssignmentIcon from '@mui/icons-material/Assignment'
 import LocalFloristIcon from '@mui/icons-material/LocalFlorist'
 import PeopleIcon from '@mui/icons-material/People'
 import InventoryIcon from '@mui/icons-material/Inventory'
+import FilterListIcon from '@mui/icons-material/FilterList'
 import api from '@/utils/api'
 
 // Gemeinsame Komponenten
-import PageHeader from '@/components/common/PageHeader'
+import TabsHeader from '@/components/common/TabsHeader'
 import FilterSection from '@/components/common/FilterSection'
 import LoadingIndicator from '@/components/common/LoadingIndicator'
+import AnimatedTabPanel from '@/components/common/AnimatedTabPanel'
 
 // Spezifische Komponenten
 import NewDistribution from './components/NewDistribution/NewDistribution'
 import DistributionHistory from './components/DistributionHistory/DistributionHistory'
 import DistributionAnalytics from './components/DistributionAnalytics/DistributionAnalytics'
 
-// Custom TabPanel
-function TabPanel({ children, value, index, ...other }) {
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`distribution-tabpanel-${index}`}
-      aria-labelledby={`distribution-tab-${index}`}
-      {...other}
-    >
-      {value === index && (
-        <Box sx={{ p: 2 }}>
-          {children}
-        </Box>
-      )}
-    </div>
-  )
-}
+// Animations-Hook importieren
+import useAnimationSettings from '@/hooks/useAnimationSettings'
 
 export default function ProductDistributionPage() {
   // States
@@ -56,6 +42,9 @@ export default function ProductDistributionPage() {
   const [rooms, setRooms] = useState([])
   const [availableUnits, setAvailableUnits] = useState([])
   const [distributions, setDistributions] = useState([])
+  
+  // Animationseinstellungen mit neuem Hook abrufen
+  const animSettings = useAnimationSettings('slide', 500, true);
   
   // Statistiken
   const [statistics, setStatistics] = useState({
@@ -289,42 +278,97 @@ export default function ProductDistributionPage() {
       console.error('❌ Sir, Fehler beim Aktualisieren:', error)
     }
   }, [tabValue, loadDistributions, loadStatisticsOnce])
+
+  const tabs = [
+    { 
+      label: (
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Typography component="span" sx={{ fontWeight: 'bold', fontSize: '0.75rem' }}>NEUE AUSGABE</Typography>
+          <Typography component="span" sx={{ mx: 0.3, color: 'success.main', fontWeight: 500, fontSize: '0.75rem' }}>{`(${availableUnits.length} verfügbar)`}</Typography>
+        </Box>
+      ) 
+    },
+    { 
+      label: (
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Typography component="span" sx={{ fontWeight: 'bold', fontSize: '0.75rem' }}>AUSGABENHISTORIE</Typography>
+          <Typography component="span" sx={{ mx: 0.3, color: 'primary.main', fontWeight: 500, fontSize: '0.75rem' }}>{`(${statistics.todayCount} heute)`}</Typography>
+        </Box>
+      )
+    },
+    { 
+      label: (
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Typography component="span" sx={{ fontWeight: 'bold', fontSize: '0.75rem' }}>ANALYSEN</Typography>
+        </Box>
+      )
+    }
+  ];
   
   return (
-    <Container maxWidth="xl" sx={{ 
-      width: '100%',
-      py: 1,
+    <Box sx={{ 
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
       display: 'flex',
       flexDirection: 'column',
-      height: 'calc(100vh - 200px)'
+      overflow: 'hidden'
     }}>
-      <PageHeader 
-        title="Cannabis Produktausgabe an Mitglieder der Anbauvereinigung"
-        showFilters={showFilters}
-        setShowFilters={setShowFilters}
-        sx={{ flexShrink: 0 }}
-      />
-      
-      {/* Wrapper für Statistik-Karten und Tabs */}
+      {/* Header mit Titel */}
       <Box sx={{ 
-        mb: 2,
+        p: 2, 
+        bgcolor: 'background.paper',
+        borderBottom: theme => `1px solid ${alpha(theme.palette.divider, 0.08)}`,
         display: 'flex',
-        flexDirection: 'column',
-        flex: 1,
-        minHeight: 0
+        justifyContent: 'space-between',
+        alignItems: 'center'
       }}>
-        {/* Statistik-Karten */}
-        <Paper sx={{ 
-          p: 3, 
-          mb: 0,
-          flexShrink: 0,
-          borderRadius: '8px 8px 0 0',
-          borderBottom: '3px solid',
-          borderBottomColor: (theme) => theme.palette.mode === 'dark' ? theme.palette.grey[700] : theme.palette.grey[400],
-          border: '2px solid',
-          borderColor: (theme) => theme.palette.divider,
-          borderBottomWidth: '3px'
-        }}>
+        <Typography variant="h5" sx={{ fontWeight: 500 }}>
+          Cannabis Produktausgabe an Mitglieder
+        </Typography>
+        
+        {/* Filter-Button oben rechts - nur für Tab 1 sichtbar */}
+        {tabValue === 1 && (
+          <Box
+            sx={{
+              border: theme => `1px solid ${alpha(theme.palette.divider, 0.3)}`,
+              borderRadius: '4px',
+              p: 0.75,
+              display: 'inline-flex',
+              alignItems: 'center',
+              backgroundColor: 'background.paper',
+              '&:hover': {
+                backgroundColor: theme => alpha(theme.palette.action.hover, 0.08),
+                borderColor: theme => theme.palette.divider
+              }
+            }}
+          >
+            <Button 
+              variant="text" 
+              color="inherit" 
+              onClick={() => setShowFilters(!showFilters)}
+              startIcon={<FilterListIcon />}
+              sx={{ 
+                textTransform: 'none', 
+                color: 'text.primary',
+                fontSize: '0.875rem'
+              }}
+            >
+              {showFilters ? 'Filter ausblenden' : 'Filter anzeigen'}
+            </Button>
+          </Box>
+        )}
+      </Box>
+
+      {/* Statistik-Karten im neuen Design */}
+      <Box sx={{ 
+        p: 2,
+        bgcolor: 'background.paper',
+        borderBottom: theme => `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+        flexShrink: 0
+      }}>
         <Box sx={{ 
           display: 'grid', 
           gridTemplateColumns: {
@@ -332,19 +376,18 @@ export default function ProductDistributionPage() {
             sm: 'repeat(2, 1fr)',
             md: 'repeat(4, 1fr)'
           },
-          gap: 3
+          gap: 2
         }}>
           {/* Ausgaben */}
           <Box sx={{ 
-            bgcolor: '#e8f5e9',
-            borderRadius: 2,
+            bgcolor: theme => alpha(theme.palette.success.main, 0.04),
+            borderRadius: 1,
             overflow: 'hidden',
-            border: '1px solid #c8e6c9',
+            border: theme => `1px solid ${alpha(theme.palette.success.main, 0.12)}`,
             transition: 'all 0.2s ease',
             '&:hover': {
-              boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
-              transform: 'translateY(-4px)',
-              borderColor: '#66bb6a'
+              transform: 'translateY(-2px)',
+              borderColor: theme => alpha(theme.palette.success.main, 0.3)
             }
           }}>
             <Box sx={{ 
@@ -356,11 +399,11 @@ export default function ProductDistributionPage() {
                 right: 12,
                 top: 12,
                 fontSize: 24,
-                color: '#66bb6a',
-                opacity: 0.6
+                color: 'success.main',
+                opacity: 0.3
               }} />
               
-              <Typography variant="h4" fontWeight="bold" color="#2e7d32">
+              <Typography variant="h4" fontWeight="bold" color="success.main">
                 {statistics.todayCount}
               </Typography>
               <Typography variant="caption" color="text.secondary">
@@ -371,15 +414,15 @@ export default function ProductDistributionPage() {
             <Box sx={{ 
               display: 'grid', 
               gridTemplateColumns: '1fr 1fr',
-              bgcolor: '#f1f8e9',
-              borderTop: '1px solid #dcedc8'
+              bgcolor: theme => alpha(theme.palette.success.main, 0.04),
+              borderTop: theme => `1px solid ${alpha(theme.palette.success.main, 0.12)}`
             }}>
               <Box sx={{ 
                 p: 0.75, 
                 textAlign: 'center',
-                borderRight: '1px solid #dcedc8'
+                borderRight: theme => `1px solid ${alpha(theme.palette.success.main, 0.12)}`
               }}>
-                <Typography variant="body2" fontWeight="bold" color="#558b2f">
+                <Typography variant="body2" fontWeight="bold" color="success.main">
                   {statistics.monthCount}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
@@ -387,7 +430,7 @@ export default function ProductDistributionPage() {
                 </Typography>
               </Box>
               <Box sx={{ p: 0.75, textAlign: 'center' }}>
-                <Typography variant="body2" fontWeight="bold" color="#558b2f">
+                <Typography variant="body2" fontWeight="bold" color="success.main">
                   {statistics.yearCount}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
@@ -399,15 +442,14 @@ export default function ProductDistributionPage() {
           
           {/* Gesamtmenge */}
           <Box sx={{ 
-            bgcolor: '#e8f5e9',
-            borderRadius: 2,
+            bgcolor: theme => alpha(theme.palette.success.main, 0.04),
+            borderRadius: 1,
             overflow: 'hidden',
-            border: '1px solid #c8e6c9',
+            border: theme => `1px solid ${alpha(theme.palette.success.main, 0.12)}`,
             transition: 'all 0.2s ease',
             '&:hover': {
-              boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
-              transform: 'translateY(-4px)',
-              borderColor: '#66bb6a'
+              transform: 'translateY(-2px)',
+              borderColor: theme => alpha(theme.palette.success.main, 0.3)
             }
           }}>
             <Box sx={{ 
@@ -419,11 +461,11 @@ export default function ProductDistributionPage() {
                 right: 12,
                 top: 12,
                 fontSize: 24,
-                color: '#66bb6a',
-                opacity: 0.6
+                color: 'success.main',
+                opacity: 0.3
               }} />
               
-              <Typography variant="h4" fontWeight="bold" color="#2e7d32">
+              <Typography variant="h4" fontWeight="bold" color="success.main">
                 {statistics.todayWeight}g
               </Typography>
               <Typography variant="caption" color="text.secondary">
@@ -434,15 +476,15 @@ export default function ProductDistributionPage() {
             <Box sx={{ 
               display: 'grid', 
               gridTemplateColumns: '1fr 1fr',
-              bgcolor: '#f1f8e9',
-              borderTop: '1px solid #dcedc8'
+              bgcolor: theme => alpha(theme.palette.success.main, 0.04),
+              borderTop: theme => `1px solid ${alpha(theme.palette.success.main, 0.12)}`
             }}>
               <Box sx={{ 
                 p: 0.75, 
                 textAlign: 'center',
-                borderRight: '1px solid #dcedc8'
+                borderRight: theme => `1px solid ${alpha(theme.palette.success.main, 0.12)}`
               }}>
-                <Typography variant="body2" fontWeight="bold" color="#558b2f">
+                <Typography variant="body2" fontWeight="bold" color="success.main">
                   {statistics.monthWeight}g
                 </Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
@@ -450,7 +492,7 @@ export default function ProductDistributionPage() {
                 </Typography>
               </Box>
               <Box sx={{ p: 0.75, textAlign: 'center' }}>
-                <Typography variant="body2" fontWeight="bold" color="#558b2f">
+                <Typography variant="body2" fontWeight="bold" color="success.main">
                   {statistics.yearWeight}g
                 </Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
@@ -462,14 +504,14 @@ export default function ProductDistributionPage() {
           
           {/* Aktive Mitglieder */}
           <Box sx={{ 
-            bgcolor: '#e8f5e9',
-            borderRadius: 2,
+            bgcolor: theme => alpha(theme.palette.info.main, 0.04),
+            borderRadius: 1,
             overflow: 'hidden',
-            border: '1px solid #c8e6c9',
+            border: theme => `1px solid ${alpha(theme.palette.info.main, 0.12)}`,
             transition: 'all 0.2s ease',
             '&:hover': {
-              boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-              transform: 'translateY(-2px)'
+              transform: 'translateY(-2px)',
+              borderColor: theme => alpha(theme.palette.info.main, 0.3)
             }
           }}>
             <Box sx={{ 
@@ -481,11 +523,11 @@ export default function ProductDistributionPage() {
                 right: 12,
                 top: 12,
                 fontSize: 24,
-                color: '#66bb6a',
-                opacity: 0.6
+                color: 'info.main',
+                opacity: 0.3
               }} />
               
-              <Typography variant="h4" fontWeight="bold" color="#2e7d32">
+              <Typography variant="h4" fontWeight="bold" color="info.main">
                 {statistics.todayActiveMembers}
               </Typography>
               <Typography variant="caption" color="text.secondary">
@@ -496,15 +538,15 @@ export default function ProductDistributionPage() {
             <Box sx={{ 
               display: 'grid', 
               gridTemplateColumns: '1fr 1fr',
-              bgcolor: '#f1f8e9',
-              borderTop: '1px solid #dcedc8'
+              bgcolor: theme => alpha(theme.palette.info.main, 0.04),
+              borderTop: theme => `1px solid ${alpha(theme.palette.info.main, 0.12)}`
             }}>
               <Box sx={{ 
                 p: 0.75, 
                 textAlign: 'center',
-                borderRight: '1px solid #dcedc8'
+                borderRight: theme => `1px solid ${alpha(theme.palette.info.main, 0.12)}`
               }}>
-                <Typography variant="body2" fontWeight="bold" color="#558b2f">
+                <Typography variant="body2" fontWeight="bold" color="info.main">
                   {statistics.monthActiveMembers}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
@@ -512,7 +554,7 @@ export default function ProductDistributionPage() {
                 </Typography>
               </Box>
               <Box sx={{ p: 0.75, textAlign: 'center' }}>
-                <Typography variant="body2" fontWeight="bold" color="#558b2f">
+                <Typography variant="body2" fontWeight="bold" color="info.main">
                   {statistics.yearActiveMembers}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
@@ -524,14 +566,14 @@ export default function ProductDistributionPage() {
           
           {/* Verfügbare Einheiten */}
           <Box sx={{ 
-            bgcolor: '#e8f5e9',
-            borderRadius: 2,
+            bgcolor: theme => alpha(theme.palette.warning.main, 0.04),
+            borderRadius: 1,
             overflow: 'hidden',
-            border: '1px solid #c8e6c9',
+            border: theme => `1px solid ${alpha(theme.palette.warning.main, 0.12)}`,
             transition: 'all 0.2s ease',
             '&:hover': {
-              boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-              transform: 'translateY(-2px)'
+              transform: 'translateY(-2px)',
+              borderColor: theme => alpha(theme.palette.warning.main, 0.3)
             }
           }}>
             <Box sx={{ 
@@ -543,11 +585,11 @@ export default function ProductDistributionPage() {
                 right: 12,
                 top: 12,
                 fontSize: 24,
-                color: '#66bb6a',
-                opacity: 0.6
+                color: 'warning.main',
+                opacity: 0.3
               }} />
               
-              <Typography variant="h4" fontWeight="bold" color="#2e7d32">
+              <Typography variant="h4" fontWeight="bold" color="warning.main">
                 {statistics.availableUnits}
               </Typography>
               <Typography variant="caption" color="text.secondary">
@@ -558,15 +600,15 @@ export default function ProductDistributionPage() {
             <Box sx={{ 
               display: 'grid', 
               gridTemplateColumns: '1fr 1fr',
-              bgcolor: '#f1f8e9',
-              borderTop: '1px solid #dcedc8'
+              bgcolor: theme => alpha(theme.palette.warning.main, 0.04),
+              borderTop: theme => `1px solid ${alpha(theme.palette.warning.main, 0.12)}`
             }}>
               <Box sx={{ 
                 p: 0.75, 
                 textAlign: 'center',
-                borderRight: '1px solid #dcedc8'
+                borderRight: theme => `1px solid ${alpha(theme.palette.warning.main, 0.12)}`
               }}>
-                <Typography variant="body2" fontWeight="bold" color="#558b2f">
+                <Typography variant="body2" fontWeight="bold" color="warning.main">
                   {statistics.marijuanaDistributed}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
@@ -574,7 +616,7 @@ export default function ProductDistributionPage() {
                 </Typography>
               </Box>
               <Box sx={{ p: 0.75, textAlign: 'center' }}>
-                <Typography variant="body2" fontWeight="bold" color="#558b2f">
+                <Typography variant="body2" fontWeight="bold" color="warning.main">
                   {statistics.hashishDistributed}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
@@ -584,140 +626,101 @@ export default function ProductDistributionPage() {
             </Box>
           </Box>
         </Box>
-      </Paper>
-      
-      {/* Filter Section */}
-      {showFilters && (
-        <Box sx={{ mb: 2, flexShrink: 0 }}>
-          <FilterSection
-            yearFilter={yearFilter}
-            setYearFilter={setYearFilter}
-            monthFilter={monthFilter}
-            setMonthFilter={setMonthFilter}
-            dayFilter={dayFilter}
-            setDayFilter={setDayFilter}
-            onApply={handleFilterApply}
-            onReset={handleFilterReset}
-            showFilters={showFilters}
-            additionalFilters={
-              <Box sx={{ display: 'flex', gap: 2, width: '100%' }}>
-                {/* Zusätzliche Filter können hier eingefügt werden */}
-              </Box>
-            }
-          />
-        </Box>
-      )}
-      
-      {/* Tabs und Content */}
-      <Paper sx={{ 
-        width: '100%'
-      }}>
-<Box
-  sx={{
-    borderBottom: '2px solid',
-    borderColor: 'divider',
-    flexShrink: 0,
-    backgroundColor: 'background.paper'
-  }}
->
-  <Tabs
-    value={tabValue}
-    onChange={handleTabChange}
-    variant="fullWidth"
-    TabIndicatorProps={{
-      sx: {
-        height: '4px',
-        backgroundColor: 'primary.main',
-        borderRadius: 0,
-      }
-    }}
-    sx={{
-      '& .MuiTabs-flexContainer': {
-        borderBottom: '2px solid',
-        borderColor: 'divider',
-      },
-      '& .MuiTab-root': {
-        textTransform: 'none',
-        fontWeight: 700,
-        fontSize: '0.95rem',
-        minHeight: 44,
-        px: 3,
-        py: 1.5,
-        borderRadius: 0,
-        borderRight: '1px solid',
-        borderColor: 'divider',
-        '&:last-of-type': {
-          borderRight: 'none'
-        },
-        '&.Mui-selected': {
-          color: 'primary.main',
-        },
-        '&:not(.Mui-selected)': {
-          color: 'text.secondary',
-        },
-      },
-      '& .MuiTabScrollButton-root': {
-        borderRadius: 0,
-      }
-    }}
-  >
-    <Tab
-      disableRipple
-      icon={<LocalShippingIcon sx={{ fontSize: 22 }} />}
-      iconPosition="start"
-      label={`NEUE AUSGABE (${availableUnits.length} verfügbar)`}
-    />
-    <Tab
-      disableRipple
-      icon={<HistoryIcon sx={{ fontSize: 22 }} />}
-      iconPosition="start"
-      label={`AUSGABENHISTORIE (${statistics.todayCount} heute)`}
-    />
-    <Tab
-      disableRipple
-      icon={<AssignmentIcon sx={{ fontSize: 22 }} />}
-      iconPosition="start"
-      label="ANALYSEN"
-    />
-  </Tabs>
-</Box>
+      </Box>
 
+      {/* Tabs - direkt anschließend ohne Lücke */}
+      <Box sx={{ flexShrink: 0 }}>
+        <TabsHeader 
+          tabValue={tabValue} 
+          onTabChange={handleTabChange} 
+          tabs={tabs}
+          color="primary"
+          ariaLabel="Produktausgabe-Tabs"
+        />
+      </Box>
+
+      {/* Hauptinhalt mit Scroll */}
+      <Box sx={{ 
+        flex: 1, 
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        position: 'relative'
+      }}>
         {loading ? (
-          <Box sx={{ p: 4, textAlign: 'center' }}>
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            height: '100%'
+          }}>
             <LoadingIndicator />
           </Box>
         ) : (
           <Box sx={{ 
-            flex: 1,
-            overflow: 'auto',
-            minHeight: 0,
-            // Elegante Scrollbar-Styles
-            '&::-webkit-scrollbar': {
-              width: '8px',
-            },
-            '&::-webkit-scrollbar-track': {
-              background: '#f5f5f5',
-              borderRadius: '4px',
-            },
-            '&::-webkit-scrollbar-thumb': {
-              background: '#c0c0c0',
-              borderRadius: '4px',
-              transition: 'background 0.2s',
-              '&:hover': {
-                background: '#999',
-              },
-            },
+            height: '100%', 
+            display: 'flex', 
+            flexDirection: 'column',
+            overflow: 'hidden'
           }}>
-            <TabPanel value={tabValue} index={0}>
+            <AnimatedTabPanel 
+              value={tabValue} 
+              index={0} 
+              animationType={animSettings.type} 
+              direction="right" 
+              duration={animSettings.duration}
+              sx={{ 
+                height: '100%', 
+                p: 0,
+                m: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden'
+              }}
+            >
               <NewDistribution 
                 members={members}
                 rooms={rooms}
                 availableUnits={availableUnits}
                 onSuccess={refreshData}
               />
-            </TabPanel>
+            </AnimatedTabPanel>
             
-            <TabPanel value={tabValue} index={1}>
+            <AnimatedTabPanel 
+              value={tabValue} 
+              index={1} 
+              animationType={animSettings.type} 
+              direction="up" 
+              duration={animSettings.duration}
+              sx={{ 
+                height: '100%', 
+                p: 0,
+                m: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden'
+              }}
+            >
+              {/* Filter Section für Historie */}
+              {showFilters && tabValue === 1 && (
+                <Box sx={{ 
+                  borderBottom: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+                  flexShrink: 0
+                }}>
+                  <FilterSection
+                    yearFilter={yearFilter}
+                    setYearFilter={setYearFilter}
+                    monthFilter={monthFilter}
+                    setMonthFilter={setMonthFilter}
+                    dayFilter={dayFilter}
+                    setDayFilter={setDayFilter}
+                    onApply={handleFilterApply}
+                    onReset={handleFilterReset}
+                    showFilters={showFilters}
+                  />
+                </Box>
+              )}
+              
               <DistributionHistory 
                 distributions={distributions}
                 members={members}
@@ -727,18 +730,31 @@ export default function ProductDistributionPage() {
                 distributorFilter={distributorFilter}
                 setDistributorFilter={setDistributorFilter}
               />
-            </TabPanel>
+            </AnimatedTabPanel>
             
-            <TabPanel value={tabValue} index={2}>
+            <AnimatedTabPanel 
+              value={tabValue} 
+              index={2} 
+              animationType={animSettings.type} 
+              direction="left" 
+              duration={animSettings.duration}
+              sx={{ 
+                height: '100%', 
+                p: 3,
+                m: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'auto'
+              }}
+            >
               <DistributionAnalytics 
                 distributions={distributions}
                 statistics={statistics}
               />
-            </TabPanel>
+            </AnimatedTabPanel>
           </Box>
         )}
-        </Paper>
       </Box>
-    </Container>
+    </Box>
   )
 }

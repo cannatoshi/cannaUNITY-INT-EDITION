@@ -1,7 +1,8 @@
 // frontend/src/apps/trackandtrace/pages/Packaging/components/PackagingTable.jsx
 import React, { useState, useEffect } from 'react'
-import { Box, Typography, Button, IconButton, Tooltip, Badge } from '@mui/material'
 import { 
+  Box, Typography, Button, IconButton, Badge, Tooltip,
+  FormControl, Select, MenuItem, useTheme, alpha,
   Table, TableContainer, TableHead, TableRow, TableCell, TableBody,
   Paper, Pagination
 } from '@mui/material'
@@ -14,30 +15,45 @@ import EuroIcon from '@mui/icons-material/Euro'
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney'
 import TrendingUpIcon from '@mui/icons-material/TrendingUp'
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 
-import TableHeader from '@/components/common/TableHeader'
 import AccordionRow from '@/components/common/AccordionRow'
 import DetailCards from '@/components/common/DetailCards'
 import PaginationFooter from '@/components/common/PaginationFooter'
+import FilterSection from '@/components/common/FilterSection'
 import LoadingIndicator from '@/components/common/LoadingIndicator'
 import api from '@/utils/api'
 
-/**
- * PackagingTable Komponente für die Darstellung der Verpackungs-Tabelle
- * 🆕 ERWEITERT: Mit vollständiger Preisanzeige und Wertberechnung
- */
 const PackagingTable = ({
   tabValue,
   data,
   expandedPackagingId,
   onExpandPackaging,
   onOpenDestroyDialog,
-  onOpenImageModal, // NEU
+  onOpenImageModal,
   currentPage,
   totalPages,
-  onPageChange
+  onPageChange,
+  pageSize,
+  onPageSizeChange,
+  pageSizeOptions = [5, 10, 15, 25, 50],
+  totalCount,
+  yearFilter,
+  setYearFilter,
+  monthFilter,
+  setMonthFilter,
+  dayFilter,
+  setDayFilter,
+  productTypeFilter,
+  setProductTypeFilter,
+  showFilters,
+  setShowFilters,
+  onFilterApply,
+  onFilterReset
 }) => {
-  // Neue State-Variablen für Einheiten hinzufügen
+  const theme = useTheme();
+  
+  // State-Variablen für Einheiten
   const [packagingUnits, setPackagingUnits] = useState({});
   const [unitsCurrentPage, setUnitsCurrentPage] = useState({});
   const [unitsTotalPages, setUnitsTotalPages] = useState({});
@@ -53,20 +69,18 @@ const PackagingTable = ({
       
       console.log('Geladene Verpackungseinheiten:', res.data);
       
-      // Speichern der Einheiten
       setPackagingUnits(prev => ({
         ...prev,
         [packagingId]: res.data.results || []
       }));
       
-      // Seiteninformationen speichern
       setUnitsCurrentPage(prev => ({
         ...prev,
         [packagingId]: page
       }));
       
       const total = res.data.count || 0;
-      const pages = Math.ceil(total / 10); // pageSize im Backend
+      const pages = Math.ceil(total / 10);
       setUnitsTotalPages(prev => ({
         ...prev,
         [packagingId]: pages
@@ -74,7 +88,6 @@ const PackagingTable = ({
       
     } catch (error) {
       console.error('Fehler beim Laden der Verpackungseinheiten:', error);
-      // Bei Fehler leere Liste setzen
       setPackagingUnits(prev => ({
         ...prev,
         [packagingId]: []
@@ -84,31 +97,25 @@ const PackagingTable = ({
     }
   };
   
-  // Funktion zum Umblättern der Einheiten-Seiten
   const handleUnitsPageChange = (packagingId, event, page) => {
     loadUnitsForPackaging(packagingId, page);
   };
   
-  // Funktion zur Vernichtung einer Einheit
   const handleDestroyUnit = (unit) => {
-    // Implementierung später - zunächst Platzhalter
     console.log('Vernichte Einheit:', unit);
   };
 
-  // UseEffect hinzufügen, um Einheiten beim Aufklappen eines Batches zu laden
   useEffect(() => {
     if (expandedPackagingId && tabValue !== 3) {
       loadUnitsForPackaging(expandedPackagingId, 1);
     }
   }, [expandedPackagingId, tabValue]);
 
-  // Hilfsfunktion zum Ermitteln des Produkttyps für die Anzeige
   const getProductTypeDisplay = (item) => {
     if (item.product_type_display) {
       return item.product_type_display;
     }
     
-    // Fallback zur manuellen Anzeige
     if (item.product_type === 'marijuana') {
       return 'Marihuana';
     } else if (item.product_type === 'hashish') {
@@ -118,27 +125,26 @@ const PackagingTable = ({
     return item.product_type || 'Unbekannt';
   };
 
-  // 🆕 ERWEITERTE SPALTEN FÜR DEN TABELLENKOPF (MIT PREISEN UND MEDIEN):
+  // Spalten für den Tabellenkopf definieren
   const getHeaderColumns = () => {
     return [
-      { label: 'Genetik', width: '11%', align: 'left' }, // Reduziert
-      { label: 'Produkttyp', width: '9%', align: 'left' }, // Reduziert
-      { label: 'Charge-Nummer', width: '15%', align: 'left' }, // Reduziert
+      { label: '', width: '3%', align: 'center' },
+      { label: 'Genetik', width: '10%', align: 'left' },
+      { label: 'Produkttyp', width: '8%', align: 'left' },
+      { label: 'Charge-Nummer', width: '14%', align: 'left' },
       { label: 'Gewicht', width: '8%', align: 'center' },
       { label: 'Einheiten', width: '7%', align: 'center' },
       { label: 'Einheitsgewicht', width: '7%', align: 'center' },
       { label: '€/g', width: '7%', align: 'center' },
       { label: 'Gesamtwert', width: '9%', align: 'center' },
       { label: 'Verpackt von', width: '10%', align: 'left' },
-      { label: 'Erstellt am', width: '9%', align: 'left' }, // Reduziert
-      { label: 'Medien', width: '7%', align: 'center' }, // NEU
-      { label: '', width: '4%', align: 'center' }
+      { label: 'Erstellt am', width: '9%', align: 'left' },
+      { label: 'Aktionen', width: '5%', align: 'center' }
     ]
   }
 
-  // 🆕 ERWEITERTE FUNKTION ZUM ERSTELLEN DER SPALTEN FÜR EINE ZEILE (MIT PREISEN UND MEDIEN):
+  // Funktion zum Erstellen der Spalten für eine Zeile
   const getRowColumns = (packaging) => {
-    // Bestimme Icon und Farbe für den Produkttyp
     let productIcon = LocalFloristIcon;
     let productColor = 'success.main';
     
@@ -147,20 +153,47 @@ const PackagingTable = ({
       productColor = 'warning.main';
     }
     
-    // Prüfe, ob dies eine Multi-Packaging-Verpackung ist (erkennen an den Notizen)
+    // Bestimme Tab-Farbe
+    let tabColor = 'primary.main';
+    if (tabValue === 1) tabColor = 'success.main';
+    else if (tabValue === 2) tabColor = 'warning.main';
+    else if (tabValue === 3) tabColor = 'error.main';
+    
     const isMultiPackaging = packaging.notes && packaging.notes.includes('Zeile');
     
     return [
       {
+        content: (
+          <IconButton 
+            onClick={(e) => {
+              e.stopPropagation();
+              onExpandPackaging(packaging.id);
+            }}
+            size="small"
+            sx={{ 
+              color: tabColor,
+              width: '28px',
+              height: '28px',
+              transform: expandedPackagingId === packaging.id ? 'rotate(180deg)' : 'rotate(0deg)',
+              transition: 'transform 300ms ease-in-out'
+            }}
+          >
+            <ExpandMoreIcon fontSize="small" />
+          </IconButton>
+        ),
+        width: '3%',
+        align: 'center'
+      },
+      {
         content: packaging.source_strain || "Unbekannt",
-        width: '11%', // Angepasst
+        width: '10%',
         bold: true,
         icon: ScienceIcon,
         iconColor: tabValue === 3 ? 'error.main' : 'secondary.main'
       },
       {
         content: getProductTypeDisplay(packaging),
-        width: '9%', // Angepasst
+        width: '8%',
         bold: true,
         icon: productIcon,
         iconColor: tabValue === 3 ? 'error.main' : productColor
@@ -179,7 +212,7 @@ const PackagingTable = ({
                 display: 'block', 
                 pt: '3px',
                 lineHeight: 1.2,
-                wordBreak: 'break-word' // Ermöglicht Umbrüche bei längeren Chargen-Nummern
+                wordBreak: 'break-word'
               }}
             >
               {packaging.batch_number || ''}
@@ -191,22 +224,18 @@ const PackagingTable = ({
                 fontSize="0.65rem"
                 sx={{ display: 'block' }}
               >
-                {/* Extraktion der Position und Gesamtzahl aus den Notizen */}
                 {(() => {
-                  // Extrahiere die Zeilennummer aus den Notizen (z.B. "Zeile 1:")
                   const lineMatch = packaging.notes.match(/Zeile (\d+):/);
                   const lineNumber = lineMatch ? lineMatch[1] : '?';
-                  // Extrahiere die Gesamtzahl der Verpackungen aus dem Batch-Namen
-                  // Annahme: die höchste Nummer im Muster :XXXX ist die letzte Verpackung
                   const batchNumberSuffix = packaging.batch_number.split(':').pop();
-                  const highestBatchNumber = 3; // Fallback-Wert (aus dem Beispiel)
+                  const highestBatchNumber = 3;
                   return `Teil einer Mehrfachverpackung ${lineNumber}/${highestBatchNumber}`;
                 })()}
               </Typography>
             )}
           </Box>
         ),
-        width: '15%' // Angepasst
+        width: '14%'
       },
       {
         content: `${parseFloat(packaging.total_weight).toLocaleString('de-DE')}g`,
@@ -226,8 +255,6 @@ const PackagingTable = ({
         width: '7%',
         align: 'center'
       },
-      
-      // 🆕 PREIS PRO GRAMM SPALTE:
       {
         content: packaging.price_per_gram ? 
           `${parseFloat(packaging.price_per_gram).toFixed(2)}€` : 
@@ -239,8 +266,6 @@ const PackagingTable = ({
         iconColor: tabValue === 3 ? 'error.main' : 'success.main',
         color: packaging.price_per_gram ? (tabValue === 3 ? 'error.main' : 'success.main') : 'text.secondary'
       },
-      
-      // 🆕 GESAMTWERT SPALTE:
       {
         content: packaging.total_batch_price ? 
           `${parseFloat(packaging.total_batch_price).toFixed(2)}€` : 
@@ -252,7 +277,6 @@ const PackagingTable = ({
         iconColor: tabValue === 3 ? 'error.main' : 'primary.main',
         color: packaging.total_batch_price ? (tabValue === 3 ? 'error.main' : 'primary.main') : 'text.secondary'
       },
-      
       {
         content: packaging.member ? 
           (packaging.member.display_name || `${packaging.member.first_name} ${packaging.member.last_name}`) 
@@ -261,45 +285,53 @@ const PackagingTable = ({
       },
       {
         content: new Date(packaging.created_at).toLocaleDateString('de-DE'),
-        width: '9%' // Angepasst
+        width: '9%'
       },
-      // NEU: Medien-Spalte
       {
         content: (
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-            <Tooltip title={`Medien verwalten (${packaging.image_count || 0})`}>
-              <IconButton 
-                size="small" 
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onOpenImageModal(packaging, e)
-                }}
-                sx={{ 
-                  color: tabValue === 3 ? 'error.main' : 
-                        (packaging.product_type === 'marijuana' ? 'success.main' : 'warning.main'),
-                  '&:hover': {
-                    backgroundColor: 'action.hover'
-                  }
-                }}
-              >
-                <Badge 
-                  badgeContent={packaging.image_count || 0} 
-                  color={tabValue === 3 ? 'error' : 
-                        (packaging.product_type === 'marijuana' ? 'success' : 'warning')}
+            <Box
+              sx={{
+                border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
+                borderRadius: '4px',
+                p: 0.5,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: theme.palette.background.paper,
+                '&:hover': {
+                  backgroundColor: alpha(theme.palette.action.hover, 0.1),
+                  borderColor: theme.palette.divider
+                }
+              }}
+            >
+              <Tooltip title={`Medien verwalten (${packaging.image_count || 0})`}>
+                <IconButton 
+                  size="small" 
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onOpenImageModal(packaging, e)
+                  }}
+                  sx={{ 
+                    p: 0.5,
+                    color: theme.palette.text.secondary
+                  }}
                 >
-                  <PhotoCameraIcon />
-                </Badge>
-              </IconButton>
-            </Tooltip>
+                  <Badge 
+                    badgeContent={packaging.image_count || 0} 
+                    color={tabValue === 3 ? 'error' : 
+                          (packaging.product_type === 'marijuana' ? 'success' : 'warning')}
+                  >
+                    <PhotoCameraIcon sx={{ fontSize: '1rem' }} />
+                  </Badge>
+                </IconButton>
+              </Tooltip>
+            </Box>
           </Box>
         ),
-        width: '7%',
+        width: '5%',
         align: 'center',
         stopPropagation: true
-      },
-      {
-        content: '',  // Platz für das Aufklapp-Symbol
-        width: '4%'
       }
     ]
   }
@@ -317,7 +349,6 @@ const PackagingTable = ({
     const productType = getProductTypeDisplay(packaging);
     const labTestingInfo = packaging.lab_testing_batch_number || "Unbekannte Charge";
     
-    // 🆕 PREISINFO IN AKTIVITÄTSMELDUNG:
     const priceInfo = packaging.total_batch_price ? 
       ` Gesamtwert: ${parseFloat(packaging.total_batch_price).toFixed(2)}€` : 
       "";
@@ -333,7 +364,7 @@ const PackagingTable = ({
     }
   };
 
-  // 🆕 ERWEITERTE FUNKTION ZUR ANZEIGE DER VERPACKUNGSEINHEITEN-TABELLE (MIT PREISEN):
+  // Funktion zur Anzeige der Verpackungseinheiten-Tabelle
   const renderUnitTable = (packaging) => {
     const packagingId = packaging.id;
     const isLoading = loadingUnits[packagingId];
@@ -345,7 +376,6 @@ const PackagingTable = ({
           <Typography variant="subtitle2" color="secondary" sx={{ display: 'flex', alignItems: 'center' }}>
             <InventoryIcon sx={{ mr: 1 }} />
             Verpackungseinheiten
-            {/* 🆕 GESAMTWERT-ANZEIGE: */}
             {packaging.total_batch_price && (
               <Typography 
                 variant="caption" 
@@ -353,7 +383,7 @@ const PackagingTable = ({
                   ml: 2, 
                   color: 'primary.main', 
                   fontWeight: 'bold',
-                  backgroundColor: 'primary.light',
+                  backgroundColor: alpha(theme.palette.primary.main, 0.1),
                   px: 1,
                   py: 0.5,
                   borderRadius: 1
@@ -376,7 +406,6 @@ const PackagingTable = ({
                     <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Einheits-Nummer</TableCell>
                     <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>UUID</TableCell>
                     <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Gewicht</TableCell>
-                    {/* 🆕 PREIS-SPALTE: */}
                     <TableCell sx={{ color: 'white', fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
                       <EuroIcon sx={{ mr: 0.5, fontSize: 16 }} />
                       Stückpreis
@@ -390,8 +419,8 @@ const PackagingTable = ({
                     <TableRow 
                       key={unit.id}
                       sx={{ 
-                        backgroundColor: 'white',
-                        '&:nth-of-type(odd)': { backgroundColor: 'rgba(0, 0, 0, 0.02)' }
+                        backgroundColor: theme.palette.background.paper,
+                        '&:nth-of-type(odd)': { backgroundColor: alpha(theme.palette.action.hover, 0.05) }
                       }}
                     >
                       <TableCell>
@@ -403,7 +432,6 @@ const PackagingTable = ({
                       <TableCell>
                         {parseFloat(unit.weight).toLocaleString('de-DE')}g
                       </TableCell>
-                      {/* 🆕 PREIS-ZELLE: */}
                       <TableCell sx={{ fontWeight: 'bold' }}>
                         {unit.unit_price ? (
                           <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -466,9 +494,8 @@ const PackagingTable = ({
     );
   };
 
-  // 🆕 ERWEITERTE DETAILANSICHT FÜR EINE VERPACKUNG MIT PREISEN:
+  // Detailansicht für eine Verpackung rendern
   const renderPackagingDetails = (packaging) => {
-    // Bestimme Icon, Farbe und Text für den Produkttyp
     let productIcon = LocalFloristIcon;
     let productColor = 'success.main';
     let productType = getProductTypeDisplay(packaging);
@@ -481,21 +508,21 @@ const PackagingTable = ({
     const chargeDetails = (
       <Box>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-          <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'rgba(0, 0, 0, 0.6)' }}>
+          <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>
             Charge-Nummer:
           </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(0, 0, 0, 0.87)' }}>
+          <Typography variant="body2" sx={{ color: 'text.primary' }}>
             {packaging.batch_number}
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-          <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'rgba(0, 0, 0, 0.6)' }}>
+          <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>
             UUID:
           </Typography>
           <Typography 
             variant="body2" 
             sx={{ 
-              color: 'rgba(0, 0, 0, 0.87)',
+              color: 'text.primary',
               fontFamily: 'monospace',
               fontSize: '0.75rem',
               wordBreak: 'break-all'
@@ -505,84 +532,82 @@ const PackagingTable = ({
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-          <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'rgba(0, 0, 0, 0.6)' }}>
+          <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>
             Produkttyp:
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             {React.createElement(productIcon, { style: { marginRight: '4px', color: productColor }, fontSize: 'small' })}
-            <Typography variant="body2" sx={{ color: 'rgba(0, 0, 0, 0.87)' }}>
+            <Typography variant="body2" sx={{ color: 'text.primary' }}>
               {productType}
             </Typography>
           </Box>
         </Box>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-          <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'rgba(0, 0, 0, 0.6)' }}>
+          <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>
             Erstellt am:
           </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(0, 0, 0, 0.87)' }}>
+          <Typography variant="body2" sx={{ color: 'text.primary' }}>
             {new Date(packaging.created_at).toLocaleDateString('de-DE')}
           </Typography>
         </Box>
         {tabValue === 3 && packaging.destroyed_at && (
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-            <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'rgba(0, 0, 0, 0.6)' }}>
+            <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>
               Vernichtet am:
             </Typography>
-            <Typography variant="body2" sx={{ color: 'rgba(0, 0, 0, 0.87)' }}>
+            <Typography variant="body2" sx={{ color: 'text.primary' }}>
               {new Date(packaging.destroyed_at).toLocaleDateString('de-DE')}
             </Typography>
           </Box>
         )}
         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-          <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'rgba(0, 0, 0, 0.6)' }}>
+          <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>
             Quell-Charge:
           </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(0, 0, 0, 0.87)' }}>
+          <Typography variant="body2" sx={{ color: 'text.primary' }}>
             {packaging.lab_testing_batch_number || "Unbekannt"}
           </Typography>
         </Box>
       </Box>
     )
 
-    // 🆕 ERWEITERTE VERPACKUNGSDETAILS MIT PREISEN:
     const packagingDetails = (
       <Box>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-          <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'rgba(0, 0, 0, 0.6)' }}>
+          <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>
             Genetik:
           </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(0, 0, 0, 0.87)' }}>
+          <Typography variant="body2" sx={{ color: 'text.primary' }}>
             {packaging.source_strain || "Unbekannt"}
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-          <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'rgba(0, 0, 0, 0.6)' }}>
+          <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>
             Gesamtgewicht:
           </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(0, 0, 0, 0.87)' }}>
+          <Typography variant="body2" sx={{ color: 'text.primary' }}>
             {parseFloat(packaging.total_weight).toLocaleString('de-DE')}g
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-          <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'rgba(0, 0, 0, 0.6)' }}>
+          <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>
             Anzahl Einheiten:
           </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(0, 0, 0, 0.87)', fontWeight: 'bold' }}>
+          <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 'bold' }}>
             {packaging.unit_count}
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-          <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'rgba(0, 0, 0, 0.6)' }}>
+          <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>
             Gewicht pro Einheit:
           </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(0, 0, 0, 0.87)', fontWeight: 'bold' }}>
+          <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 'bold' }}>
             {parseFloat(packaging.unit_weight).toLocaleString('de-DE')}g
           </Typography>
         </Box>
         
-        {/* 🆕 PREISDETAILS HINZUFÜGEN: */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-          <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'rgba(0, 0, 0, 0.6)', display: 'flex', alignItems: 'center' }}>
+          <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'text.secondary', display: 'flex', alignItems: 'center' }}>
             <EuroIcon sx={{ mr: 0.5, fontSize: 16 }} />
             Preis pro Gramm:
           </Typography>
@@ -598,7 +623,7 @@ const PackagingTable = ({
         </Box>
         
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-          <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'rgba(0, 0, 0, 0.6)', display: 'flex', alignItems: 'center' }}>
+          <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'text.secondary', display: 'flex', alignItems: 'center' }}>
             <AttachMoneyIcon sx={{ mr: 0.5, fontSize: 16 }} />
             Preis pro Einheit:
           </Typography>
@@ -613,7 +638,7 @@ const PackagingTable = ({
           </Typography>
         </Box>
         
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, p: 1, bgcolor: 'primary.lighter', borderRadius: 1 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, p: 1, bgcolor: alpha(theme.palette.primary.main, 0.1), borderRadius: 1 }}>
           <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main', display: 'flex', alignItems: 'center' }}>
             <TrendingUpIcon sx={{ mr: 0.5, fontSize: 16 }} />
             Gesamtwert:
@@ -630,27 +655,27 @@ const PackagingTable = ({
         </Box>
         
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-          <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'rgba(0, 0, 0, 0.6)' }}>
+          <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>
             THC-Gehalt:
           </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(0, 0, 0, 0.87)', fontWeight: 'bold' }}>
+          <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 'bold' }}>
             {packaging.thc_content ? `${packaging.thc_content}%` : "Nicht getestet"}
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-          <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'rgba(0, 0, 0, 0.6)' }}>
+          <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>
             CBD-Gehalt:
           </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(0, 0, 0, 0.87)' }}>
+          <Typography variant="body2" sx={{ color: 'text.primary' }}>
             {packaging.cbd_content ? `${packaging.cbd_content}%` : "Nicht getestet"}
           </Typography>
         </Box>
         {tabValue === 3 && packaging.destroyed_by && (
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
-            <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'rgba(0, 0, 0, 0.6)' }}>
+            <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>
               Vernichtet durch:
             </Typography>
-            <Typography variant="body2" sx={{ color: 'rgba(0, 0, 0, 0.87)' }}>
+            <Typography variant="body2" sx={{ color: 'text.primary' }}>
               {packaging.destroyed_by.display_name || 
                `${packaging.destroyed_by.first_name || ''} ${packaging.destroyed_by.last_name || ''}`.trim() || 
                "Unbekannt"}
@@ -663,10 +688,10 @@ const PackagingTable = ({
     const notesContent = (
       <Box
         sx={{
-          backgroundColor: 'white',
+          backgroundColor: theme.palette.background.paper,
           p: 2,
           borderRadius: '4px',
-          border: '1px solid rgba(0, 0, 0, 0.12)',
+          border: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
           flexGrow: 1,
           display: 'flex',
           alignItems: packaging.notes ? 'flex-start' : 'center',
@@ -678,7 +703,7 @@ const PackagingTable = ({
           variant="body2" 
           sx={{ 
             fontStyle: packaging.notes ? 'normal' : 'italic',
-            color: packaging.notes ? 'rgba(0, 0, 0, 0.87)' : 'rgba(0, 0, 0, 0.6)',
+            color: packaging.notes ? 'text.primary' : 'text.secondary',
             width: '100%'
           }}
         >
@@ -690,10 +715,10 @@ const PackagingTable = ({
     const destroyReasonContent = (
       <Box
         sx={{
-          backgroundColor: 'white',
+          backgroundColor: theme.palette.background.paper,
           p: 2,
           borderRadius: '4px',
-          border: '1px solid rgba(0, 0, 0, 0.12)',
+          border: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
           flexGrow: 1,
           display: 'flex',
           alignItems: 'flex-start',
@@ -730,7 +755,7 @@ const PackagingTable = ({
     ]
 
     // Bestimme Farbe basierend auf Tab und Produkttyp
-    let cardColor = 'secondary.main';
+    let cardColor = 'primary.main';
     
     if (tabValue === 3) {
       cardColor = 'error.main';
@@ -749,34 +774,52 @@ const PackagingTable = ({
           sx={{ 
             p: 2, 
             mb: 3, 
-            backgroundColor: 'white', 
+            backgroundColor: theme.palette.background.paper, 
             borderLeft: '4px solid',
             borderColor: cardColor,
             borderRadius: '4px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+            boxShadow: theme.palette.mode === 'dark' 
+              ? '0 1px 3px rgba(0,0,0,0.3)' 
+              : '0 1px 3px rgba(0,0,0,0.1)'
           }}
         >
-          <Typography variant="body2" sx={{ fontStyle: 'italic', color: 'rgba(0, 0, 0, 0.6)' }}>
+          <Typography variant="body2" sx={{ fontStyle: 'italic', color: 'text.secondary' }}>
             {getActivityMessage(packaging)}
           </Typography>
         </Box>
         
         <DetailCards cards={cards} color={cardColor} />
         
-        {/* Neue Verpackungseinheiten-Tabelle einfügen, wenn nicht im "Vernichtet"-Tab */}
+        {/* Verpackungseinheiten-Tabelle */}
         {tabValue !== 3 && renderUnitTable(packaging)}
 
         {/* Aktionsbereich für aktive Verpackungen */}
         {tabValue !== 3 && (
           <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
-            <Button 
-              variant="contained" 
-              color="error"
-              onClick={() => onOpenDestroyDialog(packaging)}
-              startIcon={<LocalFireDepartmentIcon />}
+            <Box
+              sx={{
+                border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
+                borderRadius: '4px',
+                p: 0.75,
+                display: 'inline-flex',
+                alignItems: 'center',
+                backgroundColor: theme.palette.background.paper,
+                '&:hover': {
+                  backgroundColor: alpha(theme.palette.error.main, 0.08),
+                  borderColor: alpha(theme.palette.error.main, 0.5)
+                }
+              }}
             >
-              Verpackung vernichten
-            </Button>
+              <Button 
+                variant="text" 
+                color="error"
+                onClick={() => onOpenDestroyDialog(packaging)}
+                startIcon={<LocalFireDepartmentIcon />}
+                sx={{ textTransform: 'none' }}
+              >
+                Verpackung vernichten
+              </Button>
+            </Box>
           </Box>
         )}
       </>
@@ -784,60 +827,203 @@ const PackagingTable = ({
   }
 
   // Bestimme Tabellen-Farbe basierend auf Tab
-  let tableColor = 'secondary';
+  let tableColor = 'primary';
   if (tabValue === 1) tableColor = 'success';
   else if (tabValue === 2) tableColor = 'warning';
   else if (tabValue === 3) tableColor = 'error';
 
   return (
     <Box sx={{ 
-      width: '100%', 
-      overflowX: 'auto',
-      '& .MuiTable-root': {
-        width: '100%',
-        tableLayout: 'fixed' // Wichtig für gleichmäßige Spaltenbreiten
-      },
-      '& .MuiTableCell-root': {
-        whiteSpace: 'nowrap',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis'
-      }
+      width: '100%',
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      backgroundColor: theme.palette.background.default,
+      overflow: 'hidden'
     }}>
-      <TableHeader columns={getHeaderColumns()} />
-
-      {data && data.length > 0 ? (
-        data.map((packaging) => (
-          <AccordionRow
-            key={packaging.id}
-            isExpanded={expandedPackagingId === packaging.id}
-            onClick={() => onExpandPackaging(packaging.id)}
-            columns={getRowColumns(packaging)}
-            borderColor={
-              tabValue === 3 ? 'error.main' : 
-              (packaging.product_type === 'marijuana' ? 'success.main' : 'warning.main')
-            }
-            expandIconPosition="end"
-          >
-            {renderPackagingDetails(packaging)}
-          </AccordionRow>
-        ))
-      ) : (
-        <Typography align="center" sx={{ mt: 4, width: '100%' }}>
-          {tabValue === 0 ? 'Keine Verpackungen vorhanden' : 
-           tabValue === 1 ? 'Kein Marihuana vorhanden' : 
-           tabValue === 2 ? 'Kein Haschisch vorhanden' : 
-           'Keine vernichteten Verpackungen vorhanden'}
-        </Typography>
+      {/* Filter Section - jetzt oben */}
+      {showFilters && (
+        <Box sx={{ 
+          borderBottom: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+          flexShrink: 0
+        }}>
+          <FilterSection
+            yearFilter={yearFilter}
+            setYearFilter={setYearFilter}
+            monthFilter={monthFilter}
+            setMonthFilter={setMonthFilter}
+            dayFilter={dayFilter}
+            setDayFilter={setDayFilter}
+            onApply={onFilterApply}
+            onReset={onFilterReset}
+            showFilters={showFilters}
+            productTypeFilter={productTypeFilter}
+            setProductTypeFilter={setProductTypeFilter}
+            showProductTypeFilter={tabValue === 0 || tabValue === 3}
+          />
+        </Box>
       )}
+      
+      {/* Scrollbare Container für Header + Content */}
+      <Box sx={{ 
+        width: '100%',
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        position: 'relative'
+      }}>
+        {/* Scrollbarer Bereich */}
+        <Box sx={{ 
+          flex: 1,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          mt: 0,
+          pt: 0,
+          // Schöne Scrollbar
+          '&::-webkit-scrollbar': {
+            width: '8px',
+            height: '8px',
+          },
+          '&::-webkit-scrollbar-track': {
+            backgroundColor: 'transparent',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            backgroundColor: theme => alpha(theme.palette.primary.main, 0.2),
+            borderRadius: '4px',
+            '&:hover': {
+              backgroundColor: theme => alpha(theme.palette.primary.main, 0.3),
+            },
+          },
+        }}>
+          {/* Tabellenkopf - sticky innerhalb des scrollbaren Containers */}
+          <Box sx={{ 
+            width: '100%', 
+            display: 'flex',
+            bgcolor: theme.palette.background.paper,
+            height: '40px',
+            alignItems: 'center',
+            borderTop: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+            borderBottom: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+            position: 'sticky',
+            top: 0,
+            zIndex: 10,
+            mt: 0,
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              bottom: -1,
+              left: 0,
+              right: 0,
+              height: '2px',
+              background: theme.palette.mode === 'dark'
+                ? 'linear-gradient(to bottom, rgba(255,255,255,0.02), transparent)'
+                : 'linear-gradient(to bottom, rgba(0,0,0,0.02), transparent)',
+              pointerEvents: 'none'
+            }
+          }}>
+            {getHeaderColumns().map((column, index) => (
+              <Box
+                key={index}
+                sx={{ 
+                  width: column.width || 'auto', 
+                  px: 1.5,
+                  textAlign: column.align || 'left', 
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <Typography 
+                  variant="caption" 
+                  sx={{ 
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    color: 'text.secondary',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}
+                >
+                  {column.label}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
 
-      <PaginationFooter
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={onPageChange}
-        hasData={data && data.length > 0}
-        emptyMessage=""
-        color={tableColor}
-      />
+          {/* Tabellenzeilen */}
+          {data && data.length > 0 ? (
+            data.map((packaging) => (
+              <AccordionRow
+                key={packaging.id}
+                isExpanded={expandedPackagingId === packaging.id}
+                onClick={() => onExpandPackaging(packaging.id)}
+                columns={getRowColumns(packaging)}
+                borderColor={
+                  tabValue === 3 ? 'error.main' : 
+                  (packaging.product_type === 'marijuana' ? 'success.main' : 'warning.main')
+                }
+                expandIconPosition="none"
+                borderless={true}
+              >
+                {renderPackagingDetails(packaging)}
+              </AccordionRow>
+            ))
+          ) : (
+            <Typography align="center" sx={{ mt: 4, width: '100%', color: 'text.secondary' }}>
+              {tabValue === 0 ? 'Keine Verpackungen vorhanden' : 
+               tabValue === 1 ? 'Kein Marihuana vorhanden' : 
+               tabValue === 2 ? 'Kein Haschisch vorhanden' : 
+               'Keine vernichteten Verpackungen vorhanden'}
+            </Typography>
+          )}
+        </Box>
+        
+        {/* Pagination - außerhalb des scrollbaren Bereichs */}
+        <Box 
+          sx={{ 
+            borderTop: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+            backgroundColor: theme.palette.background.paper,
+            p: 1,
+            display: 'flex',
+            justifyContent: 'flex-end',
+            alignItems: 'center',
+            flexShrink: 0,
+            minHeight: '56px'
+          }}
+        >
+          {/* PaginationFooter */}
+          {data && data.length > 0 && totalPages > 1 && (
+            <PaginationFooter
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={onPageChange}
+              hasData={true}
+              color={tableColor}
+            />
+          )}
+          
+          {/* Einträge pro Seite */}
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center',
+            gap: 1,
+            ml: data && data.length > 0 && totalPages > 1 ? 3 : 0 
+          }}>
+            <Typography variant="body2" sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>
+              Einträge pro Seite
+            </Typography>
+            <FormControl size="small" sx={{ minWidth: 80 }}>
+              <Select
+                value={pageSize}
+                onChange={(e) => onPageSizeChange(Number(e.target.value))}
+                sx={{ fontSize: '0.875rem' }}
+              >
+                {pageSizeOptions.map(option => (
+                  <MenuItem key={option} value={option}>{option}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+        </Box>
+      </Box>
     </Box>
   )
 }

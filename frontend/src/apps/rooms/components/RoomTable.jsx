@@ -2,8 +2,7 @@
 import React, { useState } from 'react';
 import { 
   Box, Typography, Button, IconButton, Tooltip,
-  TableContainer, TableHead, TableRow, TableCell, TableBody,
-  Paper
+  Paper, useTheme, alpha
 } from '@mui/material';
 import { Link } from 'react-router-dom';
 import EditIcon from '@mui/icons-material/Edit';
@@ -16,13 +15,13 @@ import SecurityIcon from '@mui/icons-material/Security';
 import BadgeIcon from '@mui/icons-material/Badge';
 
 import AccordionRow from '@/components/common/AccordionRow';
-import TableHeader from '@/components/common/TableHeader';
-import PaginationFooter from '@/components/common/PaginationFooter';
 import DetailCards from '@/components/common/DetailCards';
+import PaginationFooter from '@/components/common/PaginationFooter';
 import SensorDataModal from '@/components/SensorDataModal';
 
 /**
  * RoomTable Komponente für die Darstellung der Raumliste mit Details
+ * Vollständig mit Dark Mode Unterstützung
  */
 const RoomTable = ({
   data,
@@ -32,21 +31,21 @@ const RoomTable = ({
   totalPages,
   onPageChange
 }) => {
-  // State für Sensor Modal
+  const theme = useTheme();
   const [sensorModalOpen, setSensorModalOpen] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState(null);
 
   // Spalten für den Tabellenkopf definieren
   const headerColumns = [
     { label: '', width: '3%', align: 'center' },
-    { label: 'Name', width: '12%', align: 'left' },
+    { label: 'Raumbezeichnung', width: '12%', align: 'left' },
     { label: 'Raumtyp', width: '9%', align: 'left' },
     { label: 'UniFi Access', width: '15%', align: 'left' },
     { label: 'Größe', width: '9%', align: 'center' },
     { label: 'Fläche (m²)', width: '7%', align: 'center' },
     { label: 'Volumen (m³)', width: '7%', align: 'center' },
     { label: 'Max. Pers.', width: '6%', align: 'center' },
-    { label: 'Pflanzen / Menge', width: '7%', align: 'center' },
+    { label: 'Anzahl', width: '7%', align: 'center' },
     { label: 'Status', width: '6%', align: 'center' },
     { label: 'Aktionen', width: '19%', align: 'center' }
   ];
@@ -179,16 +178,16 @@ const RoomTable = ({
             {/* Details anzeigen */}
             <Box
               sx={{
-                border: '1px solid rgba(0, 0, 0, 0.12)',
+                border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
                 borderRadius: '4px',
                 p: 0.5,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: 'white',
+                backgroundColor: theme.palette.background.paper,
                 '&:hover': {
-                  backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                  borderColor: 'rgba(0, 0, 0, 0.23)'
+                  backgroundColor: alpha(theme.palette.action.hover, 0.1),
+                  borderColor: theme.palette.divider
                 }
               }}
             >
@@ -199,7 +198,7 @@ const RoomTable = ({
                   size="small"
                   sx={{ 
                     p: 0.5,
-                    color: 'rgba(0, 0, 0, 0.54)'
+                    color: theme.palette.text.secondary
                   }}
                 >
                   <VisibilityIcon sx={{ fontSize: '1rem' }} />
@@ -210,17 +209,17 @@ const RoomTable = ({
             {/* Sensordaten - immer anzeigen, aber disabled wenn keine Sensoren */}
             <Box
               sx={{
-                border: '1px solid rgba(0, 0, 0, 0.12)',
+                border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
                 borderRadius: '4px',
                 p: 0.5,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: 'white',
+                backgroundColor: theme.palette.background.paper,
                 opacity: room.protect_sensors_info && room.protect_sensors_info.length > 0 ? 1 : 0.5,
                 '&:hover': room.protect_sensors_info && room.protect_sensors_info.length > 0 ? {
-                  backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                  borderColor: 'rgba(0, 0, 0, 0.23)'
+                  backgroundColor: alpha(theme.palette.action.hover, 0.1),
+                  borderColor: theme.palette.divider
                 } : {}
               }}
             >
@@ -238,7 +237,9 @@ const RoomTable = ({
                     disabled={!room.protect_sensors_info || room.protect_sensors_info.length === 0}
                     sx={{ 
                       p: 0.5,
-                      color: room.protect_sensors_info && room.protect_sensors_info.length > 0 ? 'rgba(0, 0, 0, 0.54)' : 'rgba(0, 0, 0, 0.26)'
+                      color: room.protect_sensors_info && room.protect_sensors_info.length > 0 
+                        ? theme.palette.text.secondary 
+                        : theme.palette.action.disabled
                     }}
                   >
                     <ThermostatIcon sx={{ fontSize: '1rem' }} />
@@ -250,16 +251,16 @@ const RoomTable = ({
             {/* Sicherheitskamera Platzhalter */}
             <Box
               sx={{
-                border: '1px solid rgba(0, 0, 0, 0.12)',
+                border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
                 borderRadius: '4px',
                 p: 0.5,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: 'white',
+                backgroundColor: theme.palette.background.paper,
                 '&:hover': {
-                  backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                  borderColor: 'rgba(0, 0, 0, 0.23)'
+                  backgroundColor: alpha(theme.palette.action.hover, 0.1),
+                  borderColor: theme.palette.divider
                 }
               }}
             >
@@ -270,7 +271,7 @@ const RoomTable = ({
                     disabled
                     sx={{ 
                       p: 0.5,
-                      color: 'rgba(0, 0, 0, 0.26)'
+                      color: theme.palette.action.disabled
                     }}
                   >
                     <SecurityIcon sx={{ fontSize: '1rem' }} />
@@ -282,16 +283,16 @@ const RoomTable = ({
             {/* Zeiterfassung Platzhalter */}
             <Box
               sx={{
-                border: '1px solid rgba(0, 0, 0, 0.12)',
+                border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
                 borderRadius: '4px',
                 p: 0.5,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: 'white',
+                backgroundColor: theme.palette.background.paper,
                 '&:hover': {
-                  backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                  borderColor: 'rgba(0, 0, 0, 0.23)'
+                  backgroundColor: alpha(theme.palette.action.hover, 0.1),
+                  borderColor: theme.palette.divider
                 }
               }}
             >
@@ -302,7 +303,7 @@ const RoomTable = ({
                     disabled
                     sx={{ 
                       p: 0.5,
-                      color: 'rgba(0, 0, 0, 0.26)'
+                      color: theme.palette.action.disabled
                     }}
                   >
                     <BadgeIcon sx={{ fontSize: '1rem' }} />
@@ -314,16 +315,16 @@ const RoomTable = ({
             {/* Raumdesigner */}
             <Box
               sx={{
-                border: '1px solid rgba(0, 0, 0, 0.12)',
+                border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
                 borderRadius: '4px',
                 p: 0.5,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: 'white',
+                backgroundColor: theme.palette.background.paper,
                 '&:hover': {
-                  backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                  borderColor: 'rgba(0, 0, 0, 0.23)'
+                  backgroundColor: alpha(theme.palette.action.hover, 0.1),
+                  borderColor: theme.palette.divider
                 }
               }}
             >
@@ -334,7 +335,7 @@ const RoomTable = ({
                   size="small"
                   sx={{ 
                     p: 0.5,
-                    color: 'rgba(0, 0, 0, 0.54)'
+                    color: theme.palette.text.secondary
                   }}
                 >
                   <TableChartIcon sx={{ fontSize: '1rem' }} />
@@ -345,16 +346,16 @@ const RoomTable = ({
             {/* Bearbeiten */}
             <Box
               sx={{
-                border: '1px solid rgba(0, 0, 0, 0.12)',
+                border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
                 borderRadius: '4px',
                 p: 0.5,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: 'white',
+                backgroundColor: theme.palette.background.paper,
                 '&:hover': {
-                  backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                  borderColor: 'rgba(0, 0, 0, 0.23)'
+                  backgroundColor: alpha(theme.palette.action.hover, 0.1),
+                  borderColor: theme.palette.divider
                 }
               }}
             >
@@ -365,7 +366,7 @@ const RoomTable = ({
                   size="small"
                   sx={{ 
                     p: 0.5,
-                    color: 'rgba(0, 0, 0, 0.54)'
+                    color: theme.palette.text.secondary
                   }}
                 >
                   <EditIcon sx={{ fontSize: '1rem' }} />
@@ -376,16 +377,16 @@ const RoomTable = ({
             {/* Löschen */}
             <Box
               sx={{
-                border: '1px solid rgba(0, 0, 0, 0.12)',
+                border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
                 borderRadius: '4px',
                 p: 0.5,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: 'white',
+                backgroundColor: theme.palette.background.paper,
                 '&:hover': {
-                  backgroundColor: 'rgba(255, 0, 0, 0.04)',
-                  borderColor: 'error.main'
+                  backgroundColor: alpha(theme.palette.error.main, 0.08),
+                  borderColor: alpha(theme.palette.error.main, 0.5)
                 }
               }}
             >
@@ -396,7 +397,7 @@ const RoomTable = ({
                   size="small"
                   sx={{ 
                     p: 0.5,
-                    color: 'rgba(0, 0, 0, 0.54)',
+                    color: theme.palette.text.secondary,
                     '&:hover': {
                       color: 'error.main'
                     }
@@ -431,14 +432,16 @@ const RoomTable = ({
           sx={{ 
             p: 2, 
             mb: 3, 
-            backgroundColor: 'white', 
+            backgroundColor: theme.palette.background.paper, 
             borderLeft: '4px solid',
             borderColor: 'primary.main',
             borderRadius: '4px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+            boxShadow: theme.palette.mode === 'dark' 
+              ? '0 1px 3px rgba(0,0,0,0.3)' 
+              : '0 1px 3px rgba(0,0,0,0.1)'
           }}
         >
-          <Typography variant="body2" sx={{ fontStyle: 'italic', color: 'rgba(0, 0, 0, 0.6)' }}>
+          <Typography variant="body2" sx={{ fontStyle: 'italic', color: 'text.secondary' }}>
             {getActivityMessage(room)}
           </Typography>
         </Box>
@@ -451,60 +454,60 @@ const RoomTable = ({
               content: (
                 <Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'rgba(0, 0, 0, 0.6)' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>
                       Name:
                     </Typography>
-                    <Typography variant="body2" sx={{ color: 'rgba(0, 0, 0, 0.87)' }}>
+                    <Typography variant="body2" sx={{ color: 'text.primary' }}>
                       {room.name}
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'rgba(0, 0, 0, 0.6)' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>
                       Raumtyp:
                     </Typography>
-                    <Typography variant="body2" sx={{ color: 'rgba(0, 0, 0, 0.87)' }}>
+                    <Typography variant="body2" sx={{ color: 'text.primary' }}>
                       {room.room_type_display}
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'rgba(0, 0, 0, 0.6)' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>
                       Kapazität:
                     </Typography>
-                    <Typography variant="body2" sx={{ color: 'rgba(0, 0, 0, 0.87)' }}>
+                    <Typography variant="body2" sx={{ color: 'text.primary' }}>
                       {room.capacity} Personen
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'rgba(0, 0, 0, 0.6)' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>
                       Pflanzenanzahl:
                     </Typography>
-                    <Typography variant="body2" sx={{ color: 'rgba(0, 0, 0, 0.87)' }}>
+                    <Typography variant="body2" sx={{ color: 'text.primary' }}>
                       {room.pflanzenanzahl}
                     </Typography>
                   </Box>
                   {room.protect_sensors_info && room.protect_sensors_info.length > 0 && (
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'rgba(0, 0, 0, 0.6)' }}>
+                      <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>
                         Sensoren:
                       </Typography>
-                      <Typography variant="body2" sx={{ color: 'rgba(0, 0, 0, 0.87)' }}>
+                      <Typography variant="body2" sx={{ color: 'text.primary' }}>
                         {room.protect_sensors_info.length} aktiv
                       </Typography>
                     </Box>
                   )}
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'rgba(0, 0, 0, 0.6)' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>
                       Erstellt am:
                     </Typography>
-                    <Typography variant="body2" sx={{ color: 'rgba(0, 0, 0, 0.87)' }}>
+                    <Typography variant="body2" sx={{ color: 'text.primary' }}>
                       {new Date(room.created_at).toLocaleDateString('de-DE')}
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'rgba(0, 0, 0, 0.6)' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>
                       Zuletzt aktualisiert:
                     </Typography>
-                    <Typography variant="body2" sx={{ color: 'rgba(0, 0, 0, 0.87)' }}>
+                    <Typography variant="body2" sx={{ color: 'text.primary' }}>
                       {new Date(room.updated_at).toLocaleDateString('de-DE')}
                     </Typography>
                   </Box>
@@ -516,50 +519,50 @@ const RoomTable = ({
               content: (
                 <Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'rgba(0, 0, 0, 0.6)' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>
                       Länge:
                     </Typography>
-                    <Typography variant="body2" sx={{ color: 'rgba(0, 0, 0, 0.87)' }}>
+                    <Typography variant="body2" sx={{ color: 'text.primary' }}>
                       {(room.length / 100).toFixed(2)} m
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'rgba(0, 0, 0, 0.6)' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>
                       Breite:
                     </Typography>
-                    <Typography variant="body2" sx={{ color: 'rgba(0, 0, 0, 0.87)' }}>
+                    <Typography variant="body2" sx={{ color: 'text.primary' }}>
                       {(room.width / 100).toFixed(2)} m
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'rgba(0, 0, 0, 0.6)' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>
                       Höhe:
                     </Typography>
-                    <Typography variant="body2" sx={{ color: 'rgba(0, 0, 0, 0.87)' }}>
+                    <Typography variant="body2" sx={{ color: 'text.primary' }}>
                       {(room.height / 100).toFixed(2)} m
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'rgba(0, 0, 0, 0.6)' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>
                       Fläche:
                     </Typography>
-                    <Typography variant="body2" sx={{ color: 'rgba(0, 0, 0, 0.87)' }}>
+                    <Typography variant="body2" sx={{ color: 'text.primary' }}>
                       {flaeche.toFixed(2)} m²
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'rgba(0, 0, 0, 0.6)' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>
                       Volumen:
                     </Typography>
-                    <Typography variant="body2" sx={{ color: 'rgba(0, 0, 0, 0.87)' }}>
+                    <Typography variant="body2" sx={{ color: 'text.primary' }}>
                       {volume.toFixed(2)} m³
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'rgba(0, 0, 0, 0.6)' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>
                       Rastergröße:
                     </Typography>
-                    <Typography variant="body2" sx={{ color: 'rgba(0, 0, 0, 0.87)' }}>
+                    <Typography variant="body2" sx={{ color: 'text.primary' }}>
                       {room.grid_size} cm
                     </Typography>
                   </Box>
@@ -571,10 +574,10 @@ const RoomTable = ({
               content: (
                 <Box
                   sx={{
-                    backgroundColor: 'white',
+                    backgroundColor: theme.palette.background.paper,
                     p: 2,
                     borderRadius: '4px',
-                    border: '1px solid rgba(0, 0, 0, 0.12)',
+                    border: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
                     flexGrow: 1,
                     display: 'flex',
                     alignItems: room.description ? 'flex-start' : 'center',
@@ -586,7 +589,7 @@ const RoomTable = ({
                     variant="body2" 
                     sx={{ 
                       fontStyle: room.description ? 'normal' : 'italic',
-                      color: room.description ? 'rgba(0, 0, 0, 0.87)' : 'rgba(0, 0, 0, 0.6)',
+                      color: room.description ? 'text.primary' : 'text.secondary',
                       width: '100%'
                     }}
                   >
@@ -604,15 +607,15 @@ const RoomTable = ({
           {/* Details anzeigen */}
           <Box
             sx={{
-              border: '1px solid rgba(0, 0, 0, 0.12)',
+              border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
               borderRadius: '4px',
               p: 0.75,
               display: 'inline-flex',
               alignItems: 'center',
-              backgroundColor: 'white',
+              backgroundColor: theme.palette.background.paper,
               '&:hover': {
-                backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                borderColor: 'rgba(0, 0, 0, 0.23)'
+                backgroundColor: alpha(theme.palette.action.hover, 0.08),
+                borderColor: theme.palette.divider
               }
             }}
           >
@@ -622,7 +625,7 @@ const RoomTable = ({
               component={Link} 
               to={`/rooms/${room.id}`}
               startIcon={<VisibilityIcon />}
-              sx={{ textTransform: 'none', color: 'rgba(0, 0, 0, 0.87)' }}
+              sx={{ textTransform: 'none', color: 'text.primary' }}
             >
               Details anzeigen
             </Button>
@@ -631,16 +634,16 @@ const RoomTable = ({
           {/* Sensordaten */}
           <Box
             sx={{
-              border: '1px solid rgba(0, 0, 0, 0.12)',
+              border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
               borderRadius: '4px',
               p: 0.75,
               display: 'inline-flex',
               alignItems: 'center',
-              backgroundColor: 'white',
+              backgroundColor: theme.palette.background.paper,
               opacity: room.protect_sensors_info && room.protect_sensors_info.length > 0 ? 1 : 0.5,
               '&:hover': room.protect_sensors_info && room.protect_sensors_info.length > 0 ? {
-                backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                borderColor: 'rgba(0, 0, 0, 0.23)'
+                backgroundColor: alpha(theme.palette.action.hover, 0.08),
+                borderColor: theme.palette.divider
               } : {}
             }}
           >
@@ -655,7 +658,12 @@ const RoomTable = ({
               }}
               startIcon={<ThermostatIcon />}
               disabled={!room.protect_sensors_info || room.protect_sensors_info.length === 0}
-              sx={{ textTransform: 'none', color: room.protect_sensors_info && room.protect_sensors_info.length > 0 ? 'rgba(0, 0, 0, 0.87)' : 'rgba(0, 0, 0, 0.38)' }}
+              sx={{ 
+                textTransform: 'none', 
+                color: room.protect_sensors_info && room.protect_sensors_info.length > 0 
+                  ? 'text.primary' 
+                  : 'text.disabled' 
+              }}
             >
               Sensordaten {room.protect_sensors_info && room.protect_sensors_info.length > 0 ? 'anzeigen' : '(keine vorhanden)'}
             </Button>
@@ -664,15 +672,15 @@ const RoomTable = ({
           {/* Sicherheitskamera Platzhalter */}
           <Box
             sx={{
-              border: '1px solid rgba(0, 0, 0, 0.12)',
+              border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
               borderRadius: '4px',
               p: 0.75,
               display: 'inline-flex',
               alignItems: 'center',
-              backgroundColor: 'white',
+              backgroundColor: theme.palette.background.paper,
               '&:hover': {
-                backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                borderColor: 'rgba(0, 0, 0, 0.23)'
+                backgroundColor: alpha(theme.palette.action.hover, 0.08),
+                borderColor: theme.palette.divider
               }
             }}
           >
@@ -690,15 +698,15 @@ const RoomTable = ({
           {/* Zeiterfassung Platzhalter */}
           <Box
             sx={{
-              border: '1px solid rgba(0, 0, 0, 0.12)',
+              border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
               borderRadius: '4px',
               p: 0.75,
               display: 'inline-flex',
               alignItems: 'center',
-              backgroundColor: 'white',
+              backgroundColor: theme.palette.background.paper,
               '&:hover': {
-                backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                borderColor: 'rgba(0, 0, 0, 0.23)'
+                backgroundColor: alpha(theme.palette.action.hover, 0.08),
+                borderColor: theme.palette.divider
               }
             }}
           >
@@ -716,15 +724,15 @@ const RoomTable = ({
           {/* Raumdesigner */}
           <Box
             sx={{
-              border: '1px solid rgba(0, 0, 0, 0.12)',
+              border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
               borderRadius: '4px',
               p: 0.75,
               display: 'inline-flex',
               alignItems: 'center',
-              backgroundColor: 'white',
+              backgroundColor: theme.palette.background.paper,
               '&:hover': {
-                backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                borderColor: 'rgba(0, 0, 0, 0.23)'
+                backgroundColor: alpha(theme.palette.action.hover, 0.08),
+                borderColor: theme.palette.divider
               }
             }}
           >
@@ -734,7 +742,7 @@ const RoomTable = ({
               component={Link} 
               to={`/rooms/${room.id}/designer`}
               startIcon={<TableChartIcon />}
-              sx={{ textTransform: 'none', color: 'rgba(0, 0, 0, 0.87)' }}
+              sx={{ textTransform: 'none', color: 'text.primary' }}
             >
               Raumdesigner öffnen
             </Button>
@@ -743,15 +751,15 @@ const RoomTable = ({
           {/* Bearbeiten */}
           <Box
             sx={{
-              border: '1px solid rgba(0, 0, 0, 0.12)',
+              border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
               borderRadius: '4px',
               p: 0.75,
               display: 'inline-flex',
               alignItems: 'center',
-              backgroundColor: 'white',
+              backgroundColor: theme.palette.background.paper,
               '&:hover': {
-                backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                borderColor: 'rgba(0, 0, 0, 0.23)'
+                backgroundColor: alpha(theme.palette.action.hover, 0.08),
+                borderColor: theme.palette.divider
               }
             }}
           >
@@ -761,7 +769,7 @@ const RoomTable = ({
               component={Link} 
               to={`/rooms/${room.id}/edit`}
               startIcon={<EditIcon />}
-              sx={{ textTransform: 'none', color: 'rgba(0, 0, 0, 0.87)' }}
+              sx={{ textTransform: 'none', color: 'text.primary' }}
             >
               Raum bearbeiten
             </Button>
@@ -770,15 +778,15 @@ const RoomTable = ({
           {/* Löschen */}
           <Box
             sx={{
-              border: '1px solid rgba(0, 0, 0, 0.12)',
+              border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
               borderRadius: '4px',
               p: 0.75,
               display: 'inline-flex',
               alignItems: 'center',
-              backgroundColor: 'white',
+              backgroundColor: theme.palette.background.paper,
               '&:hover': {
-                backgroundColor: 'rgba(255, 0, 0, 0.04)',
-                borderColor: 'error.main'
+                backgroundColor: alpha(theme.palette.error.main, 0.08),
+                borderColor: alpha(theme.palette.error.main, 0.5)
               }
             }}
           >
@@ -798,45 +806,116 @@ const RoomTable = ({
     );
   };
 
-  // Tabellenkopf vereinfacht mit der TableHeader-Komponente
-  const renderTableHeader = () => {
-    return <TableHeader columns={headerColumns} />;
-  };
-
   return (
-    <Box sx={{ width: '100%', overflowX: 'auto' }}>
-      {/* Tabellenkopf */}
-      {renderTableHeader()}
+    <Box sx={{ 
+      width: '100%',
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      backgroundColor: theme.palette.background.default,
+      overflow: 'hidden'  // Prevent outer container from scrolling
+    }}>
+      {/* Scrollbare Container für Header + Content */}
+      <Box sx={{ 
+        width: '100%',
+        flex: 1,
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        position: 'relative'
+      }}>
+        {/* Tabellenkopf - sticky innerhalb des scrollbaren Containers */}
+        <Box sx={{ 
+          width: '100%', 
+          display: 'flex',
+          bgcolor: theme.palette.background.paper,
+          height: '40px',
+          alignItems: 'center',
+          borderBottom: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+          position: 'sticky',
+          top: 0,
+          zIndex: 10,
+          // Subtiler Schatten beim Scrollen
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            bottom: -1,
+            left: 0,
+            right: 0,
+            height: '2px',
+            background: theme.palette.mode === 'dark'
+              ? 'linear-gradient(to bottom, rgba(255,255,255,0.02), transparent)'
+              : 'linear-gradient(to bottom, rgba(0,0,0,0.02), transparent)',
+            pointerEvents: 'none'
+          }
+        }}>
+          {headerColumns.map((column, index) => (
+            <Box
+              key={index}
+              sx={{ 
+                width: column.width || 'auto', 
+                px: 1.5,
+                textAlign: column.align || 'left', 
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <Typography 
+                variant="caption" 
+                sx={{ 
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  color: 'text.secondary',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}
+              >
+                {column.label}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
   
-      {/* Tabellenzeilen */}
-      {data && data.length > 0 ? (
-        data.map((room) => (
-          <AccordionRow
-            key={room.id}
-            isExpanded={expandedRoomId === room.id}
-            onClick={() => onExpandRoom(room.id)}
-            columns={getRowColumns(room)}
-            borderColor="primary.main"
-            expandIconPosition="none" // Deaktiviere das Standard-Icon, da wir ein eigenes verwenden
+        {/* Tabellenzeilen */}
+        {data && data.length > 0 ? (
+          data.map((room) => (
+            <AccordionRow
+              key={room.id}
+              isExpanded={expandedRoomId === room.id}
+              onClick={() => onExpandRoom(room.id)}
+              columns={getRowColumns(room)}
+              borderColor="primary.main"
+              expandIconPosition="none"
+              borderless={true}
+            >
+              {renderRoomDetails(room)}
+            </AccordionRow>
+          ))
+        ) : (
+          <Typography align="center" sx={{ mt: 4, width: '100%', color: 'text.secondary' }}>
+            Keine Räume vorhanden
+          </Typography>
+        )}
+        
+        {/* Pagination innerhalb des scrollbaren Bereichs */}
+        {data && data.length > 0 && totalPages > 1 && (
+          <Box 
+            sx={{ 
+              borderTop: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+              mt: 2,
+              pt: 2,
+              pb: 1,
+              backgroundColor: theme.palette.background.paper
+            }}
           >
-            {renderRoomDetails(room)}
-          </AccordionRow>
-        ))
-      ) : (
-        <Typography align="center" sx={{ mt: 4, width: '100%' }}>
-          Keine Räume vorhanden
-        </Typography>
-      )}
-  
-      {/* Pagination vereinfacht mit der PaginationFooter-Komponente */}
-      <PaginationFooter
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={onPageChange}
-        hasData={data && data.length > 0}
-        emptyMessage="Keine Räume vorhanden"
-        color="primary"
-      />
+            <PaginationFooter
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={onPageChange}
+              hasData={true}
+              color="primary"
+            />
+          </Box>
+        )}
+      </Box>
 
       {/* Sensor Data Modal */}
       <SensorDataModal

@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Box,
-  Paper,
   Stepper,
   Step,
   StepLabel,
@@ -19,7 +18,8 @@ import {
   CircularProgress,
   Backdrop,
   Tooltip,
-  Snackbar
+  Snackbar,
+  alpha
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
@@ -283,15 +283,12 @@ export default function NewDistribution() {
 
   return (
     <Box sx={{
-      py: 3,
-      mx: 'auto',
+      height: '100%',
       width: '100%',
-      maxWidth: '1700px',
-      minHeight: 'auto',
-      flex: 1,
       display: 'flex',
-      flexDirection: 'column'
-
+      flexDirection: 'column',
+      overflow: 'auto',
+      bgcolor: 'background.default'
     }}>
       {/* Erfolgs-Snackbar */}
       <Snackbar 
@@ -310,13 +307,18 @@ export default function NewDistribution() {
         </Alert>
       </Snackbar>
       
-      <Paper elevation={3} sx={{ p: 3 }}>
-        {/* Stepper mit Hintergrund */}
+      <Box sx={{ 
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column'
+      }}>
+        {/* Stepper - randlos mit nur horizontalen Borders */}
         <Box sx={{ 
-          bgcolor: 'grey.100', 
-          borderRadius: 2, 
+          bgcolor: theme => theme.palette.background.paper,
           p: 3, 
-          mb: 3 
+          borderTop: theme => `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+          borderBottom: theme => `1px solid ${alpha(theme.palette.divider, 0.08)}`
         }}>
           <Stepper activeStep={activeStep}>
             {steps.map((label, index) => (
@@ -334,55 +336,74 @@ export default function NewDistribution() {
           </Stepper>
         </Box>
 
-        {/* Content */}
+        {/* Content - direkt auf background.default */}
         {success ? (
-          <Box sx={{ textAlign: 'center', py: 6 }}>
-            <CheckCircleIcon sx={{ fontSize: 80, color: 'success.main', mb: 2 }} />
-            <Typography variant="h5" gutterBottom>
-              Ausgabe erfolgreich dokumentiert!
-            </Typography>
-            <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-              Die Produktausgabe wurde erfolgreich im System erfasst.
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Das System wird in wenigen Sekunden für eine neue Ausgabe zurückgesetzt...
-            </Typography>
-            <CircularProgress 
-              size={40} 
-              sx={{ 
-                mt: 3,
-                color: 'success.main' 
-              }} 
-            />
+          <Box sx={{ 
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            p: 3
+          }}>
+            <Box sx={{ textAlign: 'center' }}>
+              <CheckCircleIcon sx={{ fontSize: 80, color: 'success.main', mb: 2 }} />
+              <Typography variant="h5" gutterBottom>
+                Ausgabe erfolgreich dokumentiert!
+              </Typography>
+              <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+                Die Produktausgabe wurde erfolgreich im System erfasst.
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Das System wird in wenigen Sekunden für eine neue Ausgabe zurückgesetzt...
+              </Typography>
+              <CircularProgress 
+                size={40} 
+                sx={{ 
+                  mt: 3,
+                  color: 'success.main' 
+                }} 
+              />
+            </Box>
           </Box>
         ) : (
           <>
-            <Box sx={{ minHeight: 350, mb: 3 }}>
+            <Box sx={{ 
+              flex: 1, 
+              p: 3,
+              overflowY: 'auto'
+            }}>
               {renderStepContent(activeStep)}
             </Box>
             
             {/* Button-Bereich */}
             {activeStep > 0 && activeStep < steps.length - 1 && (
-              <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
-                <Button
-                  onClick={handleBack}
-                  startIcon={<ArrowBackIcon />}
-                  variant="outlined"
-                  fullWidth
-                  sx={{ height: 56 }}
-                >
-                  Zurück
-                </Button>
-                <Button
-                  onClick={handleNext}
-                  endIcon={<ArrowForwardIcon />}
-                  variant="contained"
-                  color="success"
-                  fullWidth
-                  sx={{ height: 56 }}
-                >
-                  {activeStep === 1 ? 'Weiter zur Überprüfung' : 'Zur RFID-Autorisierung'}
-                </Button>
+              <Box sx={{ 
+                p: 3, 
+                pt: 0,
+                borderTop: theme => `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+                bgcolor: 'background.paper'
+              }}>
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <Button
+                    onClick={handleBack}
+                    startIcon={<ArrowBackIcon />}
+                    variant="outlined"
+                    fullWidth
+                    sx={{ height: 56 }}
+                  >
+                    Zurück
+                  </Button>
+                  <Button
+                    onClick={handleNext}
+                    endIcon={<ArrowForwardIcon />}
+                    variant="contained"
+                    color="success"
+                    fullWidth
+                    sx={{ height: 56 }}
+                  >
+                    {activeStep === 1 ? 'Weiter zur Überprüfung' : 'Zur RFID-Autorisierung'}
+                  </Button>
+                </Box>
               </Box>
             )}
           </>
@@ -409,7 +430,7 @@ export default function NewDistribution() {
             </Button>
           </DialogActions>
         </Dialog>
-      </Paper>
+      </Box>
     </Box>
   )
 }

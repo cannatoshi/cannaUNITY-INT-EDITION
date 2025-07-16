@@ -63,6 +63,8 @@ import TaskTypeList from '@/apps/taskmanager/pages/TaskTypeList'
 import TaskTypeCreate from '@/apps/taskmanager/pages/TaskTypeCreate'
 import TaskTypeDetail from '@/apps/taskmanager/pages/TaskTypeDetail'
 import TaskTypeEdit from '@/apps/taskmanager/pages/TaskTypeEdit'
+import SeedPurchaseCreate from '../apps/trackandtrace/pages/SeedPurchase/SeedPurchaseCreate'
+
 
 export const router = createBrowserRouter([
   {
@@ -89,6 +91,8 @@ export const router = createBrowserRouter([
       { path: 'rooms/item-types', element: <RoomItemTypeList /> },
       { path: 'rooms/item-types/new', element: <RoomItemTypeCreate /> },
       { path: 'rooms/item-types/:id/edit', element: <RoomItemTypeEdit /> },
+      { path: 'trace/samen/neu', element: <SeedPurchaseCreate /> },
+
 
       // Dashboards
       { path: 'unifi-access', element: <Dashboard /> },

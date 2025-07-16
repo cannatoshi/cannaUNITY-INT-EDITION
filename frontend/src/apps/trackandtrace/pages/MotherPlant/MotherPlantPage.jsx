@@ -1,22 +1,23 @@
 // frontend/src/apps/trackandtrace/pages/MotherPlant/MotherPlantPage.jsx
 import { useState, useEffect } from 'react'
-import { Container, Box, Typography, Fade } from '@mui/material'
+import { Box, Typography, Fade, Snackbar, Alert, alpha, Button } from '@mui/material'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
+import FilterListIcon from '@mui/icons-material/FilterList'
 import api from '@/utils/api'
 
 // Gemeinsame Komponenten
-import PageHeader from '@/components/common/PageHeader'
-import FilterSection from '@/components/common/FilterSection'
 import TabsHeader from '@/components/common/TabsHeader'
 import LoadingIndicator from '@/components/common/LoadingIndicator'
+import AnimatedTabPanel from '@/components/common/AnimatedTabPanel'
+
+// Dialog-Komponenten
 import DestroyDialog from '@/components/dialogs/DestroyDialog'
 import CreateCuttingDialog from '@/components/dialogs/CreateCuttingDialog'
-import AnimatedTabPanel from '@/components/common/AnimatedTabPanel'
 import RatingDialog from '@/components/dialogs/RatingDialog'
+import ImageUploadModal from '../../components/ImageUploadModal'
 
 // Spezifische Komponenten
 import MotherPlantTable from './components/MotherPlantTable'
-import ImageUploadModal from '../../components/ImageUploadModal'
 
 // Animations-Hook importieren
 import useAnimationSettings from '@/hooks/useAnimationSettings'
@@ -29,6 +30,8 @@ export default function MotherPlantPage() {
   const [destroyedBatchPlants, setDestroyedBatchPlants] = useState({})
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+  const [totalCount, setTotalCount] = useState(0)
   const [plantsCurrentPage, setPlantsCurrentPage] = useState({})
   const [plantsTotalPages, setPlantsTotalPages] = useState({})
   const [destroyedPlantsCurrentPage, setDestroyedPlantsCurrentPage] = useState({})
@@ -54,7 +57,7 @@ export default function MotherPlantPage() {
   const [dayFilter, setDayFilter] = useState('')
   const [showFilters, setShowFilters] = useState(false)
   
-  // Zähler für Tabs - Aktualisiert für separate Batch- und Pflanzenzähler
+  // Zähler für Tabs
   const [activeBatchesCount, setActiveBatchesCount] = useState(0)
   const [activePlantsCount, setActivePlantsCount] = useState(0)
   const [destroyedBatchesCount, setDestroyedBatchesCount] = useState(0)
@@ -62,7 +65,6 @@ export default function MotherPlantPage() {
   
   // Neu: State für Stecklings-Chargen hinzufügen
   const [cuttingBatches, setCuttingBatches] = useState([])
-  // Zähler für Stecklinge
   const [cuttingBatchCount, setCuttingBatchCount] = useState(0)
   const [cuttingCount, setCuttingCount] = useState(0)
   
@@ -79,12 +81,27 @@ export default function MotherPlantPage() {
   const [cuttingNotes, setCuttingNotes] = useState('')
   const [selectedMemberId, setSelectedMemberId] = useState('')
   const [selectedRoomId, setSelectedRoomId] = useState('')
-  // Neu: State für ausgewählte Mutterpflanze
   const [selectedMotherPlant, setSelectedMotherPlant] = useState(null)
   
   // States für Image Upload Modal
   const [openImageModal, setOpenImageModal] = useState(false)
   const [selectedBatchForImages, setSelectedBatchForImages] = useState(null)
+  
+  // State für globale Snackbar
+  const [globalSnackbar, setGlobalSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success',
+    duration: 6000
+  })
+  
+  // Optionen für Page Size Dropdown
+  const pageSizeOptions = [5, 10, 15, 25, 50]
+
+  // Snackbar schließen
+  const handleCloseGlobalSnackbar = () => {
+    setGlobalSnackbar(prev => ({ ...prev, open: false }));
+  };
 
   // Handler für Rating Dialog
   const handleOpenRatingDialog = (batch, plant = null) => {
@@ -97,14 +114,12 @@ export default function MotherPlantPage() {
     setOpenRatingDialog(false)
     setSelectedBatchForRating(null)
     setSelectedPlantForRating(null)
-    refreshData() // Daten neu laden
+    refreshData()
   }
 
   // Neue Funktion zum automatischen Laden der Plant-Daten für alle sichtbaren Batches
   const loadPlantsForVisibleBatches = async (batches) => {
-    // Lade Plant-Daten für alle Batches parallel
     const loadPromises = batches.map(async (batch) => {
-      // Nur laden wenn noch nicht vorhanden
       if (!batchPlants[batch.id]) {
         try {
           const res = await api.get(`/trackandtrace/motherbatches/${batch.id}/plants/?page=1&destroyed=false`);
@@ -129,10 +144,8 @@ export default function MotherPlantPage() {
       return null;
     });
     
-    // Warte auf alle Requests
     const results = await Promise.all(loadPromises);
     
-    // Aktualisiere den State mit allen geladenen Daten auf einmal
     setBatchPlants(prev => {
       const newData = { ...prev };
       results.forEach(result => {
@@ -143,16 +156,13 @@ export default function MotherPlantPage() {
       return newData;
     });
     
-    // Gib die geladenen Daten zurück für weitere Verarbeitung
     return results.filter(r => r !== null);
   };
 
   // Neue Funktion zum Laden der Rating-Counts für alle sichtbaren Batches
   const loadRatingCountsForBatches = async (batches, plantData) => {
-    // Erstelle eine Map für plant_id zu batch_id
     const plantToBatchMap = {};
     
-    // Verwende die übergebenen plantData oder hole aus State
     if (plantData) {
       plantData.forEach(({ batchId, plants }) => {
         if (plants && plants.length > 0) {
@@ -160,7 +170,6 @@ export default function MotherPlantPage() {
         }
       });
     } else {
-      // Fallback: Verwende batchPlants aus State
       batches.forEach(batch => {
         const plants = batchPlants[batch.id];
         if (plants && plants.length > 0) {
@@ -169,7 +178,6 @@ export default function MotherPlantPage() {
       });
     }
     
-    // Wenn keine Plants geladen sind, können wir keine Counts laden
     const plantIds = Object.keys(plantToBatchMap);
     if (plantIds.length === 0) {
       console.log('Keine Plant-IDs gefunden, überspringe Rating-Count-Laden');
@@ -178,13 +186,11 @@ export default function MotherPlantPage() {
     
     console.log(`Lade Rating-Counts für ${plantIds.length} Pflanzen...`);
     
-    // Lade Rating-Counts für alle Plants parallel
     const countPromises = plantIds.map(async (plantId) => {
       try {
         const response = await api.get(`/trackandtrace/motherplant-ratings/?mother_plant_id=${plantId}`);
         const ratings = response.data.results || [];
         
-        // Berechne durchschnittliche Bewertung
         let avgRating = null;
         if (ratings.length > 0) {
           avgRating = (ratings.reduce((sum, r) => {
@@ -208,12 +214,10 @@ export default function MotherPlantPage() {
       }
     });
     
-    // Warte auf alle Requests
     const results = await Promise.all(countPromises);
     
     console.log('Rating-Counts geladen:', results);
     
-    // Aktualisiere die Batch-Daten mit den Rating-Counts
     setMotherBatches(prevBatches => {
       return prevBatches.map(batch => {
         const result = results.find(r => r.batchId === batch.id);
@@ -221,7 +225,6 @@ export default function MotherPlantPage() {
           return {
             ...batch,
             rating_count: result.count,
-            // Falls die durchschnittliche Bewertung auch fehlt, setze sie hier
             average_batch_rating: batch.average_batch_rating || result.avgRating
           };
         }
@@ -233,20 +236,15 @@ export default function MotherPlantPage() {
   const loadMotherBatches = async (page = 1) => {
     setLoading(true)
     try {
-      // URL mit Filtern aufbauen
-      let url = `/trackandtrace/motherbatches/?page=${page}`;
+      let url = `/trackandtrace/motherbatches/?page=${page}&page_size=${pageSize}`;
       
-      // Zeitfilter hinzufügen, wenn vorhanden
       if (yearFilter) url += `&year=${yearFilter}`;
       if (monthFilter) url += `&month=${monthFilter}`;
       if (dayFilter) url += `&day=${dayFilter}`;
       
-      // Je nach aktivem Tab nach Pflanzen-Status filtern
       if (tabValue === 0) {
-        // Tab 0: Nur Batches mit aktiven Pflanzen anzeigen
         url += '&has_active=true';
       } else if (tabValue === 2) {
-        // Tab 2: Nur Batches mit vernichteten Pflanzen anzeigen
         url += '&has_destroyed=true';
       }
       
@@ -255,43 +253,41 @@ export default function MotherPlantPage() {
       
       setMotherBatches(res.data.results || [])
       
-      // WICHTIG: Lade automatisch die Plant-Daten für alle Batches
-      if (tabValue === 0 && res.data.results && res.data.results.length > 0) {
-        // Nur im aktiven Tab und wenn Batches vorhanden
-        const plantData = await loadPlantsForVisibleBatches(res.data.results);
-        
-        // NEU: Lade auch die Rating-Counts nachdem die Plants geladen wurden
-        await loadRatingCountsForBatches(res.data.results, plantData);
-      }
-      
-      // Berechne die Gesamtanzahl der Seiten basierend auf der Gesamtanzahl der Einträge
       const total = res.data.count || 0
-      const pages = Math.ceil(total / 5) // pageSize ist 5, wie im Backend definiert
+      setTotalCount(total)
+      const pages = Math.ceil(total / pageSize)
       setTotalPages(pages)
       setCurrentPage(page)
       
-      // Zähler aus der Antwort übernehmen
+      if (tabValue === 0 && res.data.results && res.data.results.length > 0) {
+        const plantData = await loadPlantsForVisibleBatches(res.data.results);
+        await loadRatingCountsForBatches(res.data.results, plantData);
+      }
+      
       if (res.data.counts) {
         setActivePlantsCount(res.data.counts.active_count || 0);
         setDestroyedPlantsCount(res.data.counts.destroyed_count || 0);
       }
     } catch (error) {
       console.error('Fehler beim Laden der Mutterpflanzen-Chargen:', error)
+      setGlobalSnackbar({
+        open: true, 
+        message: 'Fehler beim Laden der Mutterpflanzen: ' + (error.response?.data?.error || error.message), 
+        severity: 'error',
+        duration: 6000
+      })
     } finally {
       setLoading(false)
     }
   }
 
-
-  // Funktion zum Laden der Stecklings-Chargen
   const loadCuttingBatches = async (page = 1) => {
-    if (tabValue !== 1) return; // Nur für den Stecklinge-Tab laden (jetzt Tab 1)
+    if (tabValue !== 1) return;
     
     setLoading(true);
     try {
-      // API-Aufruf für Stecklings-Batches
-      let url = `/trackandtrace/cuttingbatches/?page=${page}`;
-      // Zeitfilter hinzufügen, wenn vorhanden
+      let url = `/trackandtrace/cuttingbatches/?page=${page}&page_size=${pageSize}`;
+      
       if (yearFilter) url += `&year=${yearFilter}`;
       if (monthFilter) url += `&month=${monthFilter}`;
       if (dayFilter) url += `&day=${dayFilter}`;
@@ -300,29 +296,32 @@ export default function MotherPlantPage() {
       console.log('Geladene Stecklings-Batches:', res.data);
       
       setCuttingBatches(res.data.results || []);
-      setTotalPages(Math.ceil((res.data.count || 0) / 5));
+      setTotalCount(res.data.count || 0);
+      setTotalPages(Math.ceil((res.data.count || 0) / pageSize));
       setCurrentPage(page);
     } catch (error) {
       console.error('Fehler beim Laden der Stecklings-Batches:', error);
+      setGlobalSnackbar({
+        open: true, 
+        message: 'Fehler beim Laden der Stecklings-Batches: ' + (error.response?.data?.error || error.message), 
+        severity: 'error',
+        duration: 6000
+      })
     } finally {
       setLoading(false);
     }
   };
   
-  // Verbesserte Funktion zum Laden aller Zähler mit separaten API-Aufrufen
   const loadAllCounts = async () => {
     try {
-      // Lade Zähler für aktive Pflanzen
       const activeRes = await api.get('/trackandtrace/motherbatches/counts/?type=active');
       setActiveBatchesCount(activeRes.data.batches_count || 0);
       setActivePlantsCount(activeRes.data.plants_count || 0);
       
-      // Lade Zähler für vernichtete Pflanzen
       const destroyedRes = await api.get('/trackandtrace/motherbatches/counts/?type=destroyed');
       setDestroyedBatchesCount(destroyedRes.data.batches_count || 0);
       setDestroyedPlantsCount(destroyedRes.data.plants_count || 0);
       
-      // Lade Zähler für Stecklinge
       const cuttingRes = await api.get('/trackandtrace/motherbatches/counts/?type=cutting');
       setCuttingBatchCount(cuttingRes.data.batch_count || 0);
       setCuttingCount(cuttingRes.data.cutting_count || 0);
@@ -331,33 +330,34 @@ export default function MotherPlantPage() {
     }
   };
   
-  // Funktion zum Laden von Mitgliedern und Räumen
   const loadMembersAndRooms = async () => {
     setLoadingOptions(true);
     try {
-      // Mitglieder laden
       const membersRes = await api.get('members/')
       console.log('Mitglieder geladen:', membersRes.data)
       
-      // Formatierte Mitglieder mit display_name
       const formattedMembers = membersRes.data.results.map(member => ({
         ...member,
         display_name: member.display_name || `${member.first_name} ${member.last_name}`
       }))
       setMembers(formattedMembers)
       
-      // Räume laden
       const roomsRes = await api.get('rooms/')
       console.log('Räume geladen:', roomsRes.data)
       setRooms(roomsRes.data.results || [])
     } catch (error) {
       console.error('Fehler beim Laden der Mitglieder und Räume:', error)
+      setGlobalSnackbar({
+        open: true, 
+        message: 'Fehler beim Laden der Mitglieder und Räume: ' + (error.response?.data?.error || error.message), 
+        severity: 'error',
+        duration: 6000
+      })
     } finally {
       setLoadingOptions(false)
     }
   };
   
-  // Handler-Funktionen für Image Upload Modal
   const handleOpenImageModal = (batch, event) => {
     if (event) event.stopPropagation()
     setSelectedBatchForImages(batch)
@@ -370,46 +370,113 @@ export default function MotherPlantPage() {
     refreshData()
   }
 
-  useEffect(() => {
-    loadMotherBatches()
-    loadAllCounts() // Verbessert: Alle Zähler beim ersten Laden holen
-    loadMembersAndRooms() // Mitglieder und Räume laden
-  }, [])
-
-  // Aktualisierter useEffect für Tab-Wechsel mit verbesserter Zähler-Logik
-  useEffect(() => {
-    // Zurücksetzen der Seite bei Tab-Wechsel
+  const handlePageSizeChange = (newPageSize) => {
+    console.log(`Ändere pageSize von ${pageSize} auf ${newPageSize}`);
+    
+    setPageSize(newPageSize);
     setCurrentPage(1);
     
-    // Zurücksetzen des expandierten Batches und Daten beim Tab-Wechsel
+    setTimeout(() => {
+      if (tabValue === 0 || tabValue === 2) {
+        let url = `/trackandtrace/motherbatches/?page=1&page_size=${newPageSize}`;
+        
+        if (tabValue === 0) {
+          url += '&has_active=true';
+        } else if (tabValue === 2) {
+          url += '&has_destroyed=true';
+        }
+        
+        if (yearFilter) url += `&year=${yearFilter}`;
+        if (monthFilter) url += `&month=${monthFilter}`;
+        if (dayFilter) url += `&day=${dayFilter}`;
+        
+        console.log("Sende API-Anfrage:", url);
+        setLoading(true);
+        
+        api.get(url)
+          .then(res => {
+            console.log('Geladene Mutterpflanzen mit neuer pageSize:', res.data);
+            setMotherBatches(res.data.results || []);
+            
+            const total = res.data.count || 0;
+            setTotalCount(total);
+            const pages = Math.ceil(total / newPageSize);
+            setTotalPages(pages);
+          })
+          .catch(error => {
+            console.error('Fehler beim Laden der Mutterpflanzen:', error);
+            setGlobalSnackbar({
+              open: true, 
+              message: 'Fehler beim Laden der Mutterpflanzen: ' + (error.response?.data?.error || error.message), 
+              severity: 'error',
+              duration: 6000
+            })
+          })
+          .finally(() => {
+            setLoading(false);
+          });
+      } else if (tabValue === 1) {
+        let url = `/trackandtrace/cuttingbatches/?page=1&page_size=${newPageSize}`;
+        
+        if (yearFilter) url += `&year=${yearFilter}`;
+        if (monthFilter) url += `&month=${monthFilter}`;
+        if (dayFilter) url += `&day=${dayFilter}`;
+        
+        console.log("Sende API-Anfrage:", url);
+        setLoading(true);
+        
+        api.get(url)
+          .then(res => {
+            console.log('Geladene Stecklings-Batches mit neuer pageSize:', res.data);
+            setCuttingBatches(res.data.results || []);
+            setTotalCount(res.data.count || 0);
+            const pages = Math.ceil((res.data.count || 0) / newPageSize);
+            setTotalPages(pages);
+          })
+          .catch(error => {
+            console.error('Fehler beim Laden der Stecklings-Batches:', error);
+            setGlobalSnackbar({
+              open: true, 
+              message: 'Fehler beim Laden der Stecklings-Batches: ' + (error.response?.data?.error || error.message), 
+              severity: 'error',
+              duration: 6000
+            })
+          })
+          .finally(() => {
+            setLoading(false);
+          });
+      }
+    }, 0);
+  };
+
+  useEffect(() => {
+    loadMotherBatches()
+    loadAllCounts()
+    loadMembersAndRooms()
+  }, [])
+
+  useEffect(() => {
+    setCurrentPage(1);
     setExpandedBatchId('');
     setBatchPlants({});
     setDestroyedBatchPlants({});
-    setSelectedPlants({}); // Wichtig: Ausgewählte Pflanzen zurücksetzen
+    setSelectedPlants({});
     
-    // Je nach Tab unterschiedliche Ladestrategien
-    if (tabValue === 0) {
-      // Tab 0: Aktive Pflanzen
+    if (tabValue === 0 || tabValue === 2) {
       loadMotherBatches(1);
     } else if (tabValue === 1) {
-      // Tab 1: Stecklinge (jetzt an Position 1)
       loadCuttingBatches(1);
-    } else if (tabValue === 2) {
-      // Tab 2: Vernichtete Pflanzen (jetzt an Position 2)
-      loadMotherBatches(1);
     }
     
-    // Verbessert: Lade alle Zähler unabhängig vom Tab
     loadAllCounts();
-  }, [tabValue]);
+  }, [tabValue, pageSize]);
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue)
-    // Beim Tab-Wechsel alle geöffneten Akkordeons schließen
     setExpandedBatchId('')
     setBatchPlants({})
     setDestroyedBatchPlants({})
-    setSelectedPlants({}) // Wichtig: Ausgewählte Pflanzen zurücksetzen
+    setSelectedPlants({})
   }
 
   const handleAccordionChange = async (batchId) => {
@@ -418,12 +485,9 @@ export default function MotherPlantPage() {
     } else {
       setExpandedBatchId(batchId)
       
-      // Je nach Tab die richtigen Daten laden
       if (tabValue === 0) {
-        // Im Tab "Aktive Pflanzen" nur aktive Pflanzen laden
         loadPlantsForBatch(batchId, 1)
       } else if (tabValue === 2) {
-        // Im Tab "Vernichtete Pflanzen" (jetzt Tab 2) nur vernichtete Pflanzen laden
         loadDestroyedPlantsForBatch(batchId, 1)
       }
     }
@@ -432,13 +496,10 @@ export default function MotherPlantPage() {
   const loadPlantsForBatch = async (batchId, page = 1) => {
     try {
       console.log("Loading plants for batch ID:", batchId);
-      // Immer aktive Pflanzen laden, unabhängig vom Tab
       const res = await api.get(`/trackandtrace/motherbatches/${batchId}/plants/?page=${page}&destroyed=false`)
       
       console.log('Geladene aktive Pflanzen für Batch:', res.data);
       
-      // Speichern der Pflanzen für diesen Batch
-      // Stelle sicher, dass alle Felder korrekt formatiert sind
       const formattedPlants = (res.data.results || []).map(plant => {
         console.log("Plant batch number:", plant.batch_number);
         return {
@@ -458,21 +519,18 @@ export default function MotherPlantPage() {
         [batchId]: formattedPlants
       }))
       
-      // Speichern der aktuellen Seite für diesen Batch
       setPlantsCurrentPage(prev => ({
         ...prev,
         [batchId]: page
       }))
       
-      // Berechne die Gesamtanzahl der Seiten für die Pflanzen dieses Batches
       const total = res.data.count || 0
-      const pages = Math.ceil(total / 5) // pageSize ist 5, wie im Backend definiert
+      const pages = Math.ceil(total / 5)
       setPlantsTotalPages(prev => ({
         ...prev,
         [batchId]: pages
       }))
 
-      // Zurücksetzen der ausgewählten Pflanzen für diesen Batch
       setSelectedPlants(prev => ({
         ...prev,
         [batchId]: []
@@ -481,7 +539,6 @@ export default function MotherPlantPage() {
       console.error('Fehler beim Laden der Pflanzen:', error)
       console.error('Details:', error.response?.data || error.message)
       
-      // Bei Fehler leere Daten setzen, um Ladespinner zu beenden
       setBatchPlants(prev => ({
         ...prev,
         [batchId]: []
@@ -497,7 +554,6 @@ export default function MotherPlantPage() {
     }
   }
 
-  // Separate Funktion zum Laden vernichteter Pflanzen
   const loadDestroyedPlantsForBatch = async (batchId, page = 1) => {
     try {
       console.log("Loading destroyed plants for batch ID:", batchId);
@@ -505,7 +561,6 @@ export default function MotherPlantPage() {
       
       console.log('Geladene vernichtete Pflanzen für Batch:', res.data);
       
-      // Speichern der vernichteten Pflanzen für diesen Batch
       const formattedPlants = (res.data.results || []).map(plant => {
         return {
           ...plant,
@@ -524,21 +579,18 @@ export default function MotherPlantPage() {
         [batchId]: formattedPlants
       }))
       
-      // Speichern der aktuellen Seite für die vernichteten Pflanzen dieses Batches
       setDestroyedPlantsCurrentPage(prev => ({
         ...prev,
         [batchId]: page
       }))
       
-      // Berechne die Gesamtanzahl der Seiten für die vernichteten Pflanzen
       const total = res.data.count || 0
-      const pages = Math.ceil(total / 5) // pageSize ist 5, wie im Backend definiert
+      const pages = Math.ceil(total / 5)
       setDestroyedPlantsTotalPages(prev => ({
         ...prev,
         [batchId]: pages
       }))
       
-      // Auch hier: Zurücksetzen der ausgewählten Pflanzen für diesen Batch
       setSelectedPlants(prev => ({
         ...prev,
         [batchId]: []
@@ -547,7 +599,6 @@ export default function MotherPlantPage() {
       console.error('Fehler beim Laden der vernichteten Pflanzen:', error)
       console.error('Details:', error.response?.data || error.message)
       
-      // Bei Fehler leere Daten setzen
       setDestroyedBatchPlants(prev => ({
         ...prev,
         [batchId]: []
@@ -563,15 +614,13 @@ export default function MotherPlantPage() {
     }
   }
 
-  // Angepasste handlePageChange Funktion mit aktualisierter Tab-Logik
   const handlePageChange = (event, page) => {
     setCurrentPage(page);
     
-    // Je nach Tab die richtige Lademethode aufrufen
     if (tabValue === 0 || tabValue === 2) {
-      loadMotherBatches(page); // Für Tab 0 (Aktive) und Tab 2 (Vernichtete)
+      loadMotherBatches(page);
     } else if (tabValue === 1) {
-      loadCuttingBatches(page); // Für Tab 1 (Stecklinge)
+      loadCuttingBatches(page);
     }
   };
 
@@ -583,16 +632,13 @@ export default function MotherPlantPage() {
     loadDestroyedPlantsForBatch(batchId, page)
   }
 
-  // Aktualisierte refreshData Funktion
   const refreshData = () => {
-    // Hauptdaten aktualisieren
     if (tabValue === 0 || tabValue === 2) {
       loadMotherBatches(currentPage);
     } else if (tabValue === 1) {
       loadCuttingBatches(currentPage);
     }
     
-    // Details aktualisieren, falls ein Batch expandiert ist
     if (expandedBatchId) {
       if (tabValue === 0) {
         loadPlantsForBatch(expandedBatchId, plantsCurrentPage[expandedBatchId] || 1);
@@ -601,23 +647,18 @@ export default function MotherPlantPage() {
       }
     }
     
-    // Zähler aktualisieren
     loadAllCounts();
   };
 
-  // Aktualisierte getDisplayedData Funktion mit neuer Tab-Logik
   const getDisplayedData = () => {
     if (tabValue === 0 || tabValue === 2) {
-      // Tab 0 und 2: Aktive/Vernichtete Pflanzen
       return motherBatches;
     } else if (tabValue === 1) {
-      // Tab 1: Konvertiert zu Stecklingen
       return cuttingBatches;
     }
     return [];
   };
 
-  // Aktualisierte handleOpenDestroyDialog Funktion
   const handleOpenDestroyDialog = (batch) => {
     setSelectedBatch(batch);
     setDestroyReason('');
@@ -625,10 +666,9 @@ export default function MotherPlantPage() {
     setOpenDestroyDialog(true);
   };
 
-  // Funktion zum Öffnen des Stecklinge erstellen Dialogs für eine spezifische Mutterpflanze
   const handleOpenCreateCuttingDialog = (batch, plant = null) => {
     setSelectedBatch(batch);
-    setSelectedMotherPlant(plant); // Setze die ausgewählte Mutterpflanze
+    setSelectedMotherPlant(plant);
     setCuttingQuantity(1);
     setCuttingNotes('');
     setSelectedMemberId('');
@@ -636,15 +676,12 @@ export default function MotherPlantPage() {
     setOpenCreateCuttingDialog(true);
   };
 
-  // Funktion zum Erstellen von Stecklingen
   const handleCreateCuttings = async (rfidMemberId = null) => {
     try {
       if (!selectedBatch) return;
 
-      // Wenn eine spezifische Mutterpflanze ausgewählt wurde, verwende ihre ID
       const plantId = selectedMotherPlant ? selectedMotherPlant.id : null;
       
-      // API-Pfad anpassen, um die plant_id zu verwenden
       const endpoint = selectedMotherPlant 
         ? `/trackandtrace/motherplants/${plantId}/create_cuttings/` 
         : `/trackandtrace/motherbatches/${selectedBatch.id}/create_cuttings/`;
@@ -660,14 +697,27 @@ export default function MotherPlantPage() {
 
       setOpenCreateCuttingDialog(false);
       refreshData();
+      
+      const memberName = members.find(m => m.id === selectedMemberId)?.display_name || "Unbekannt"
+      
+      setGlobalSnackbar({
+        open: true,
+        message: `Stecklinge erfolgreich erstellt - Autorisiert durch: ${memberName}`,
+        severity: 'success',
+        duration: 10000
+      })
     } catch (error) {
       console.error('Fehler beim Erstellen der Stecklinge:', error);
       console.error('Details:', error.response?.data || error.message);
-      alert(error.response?.data?.error || 'Ein Fehler ist aufgetreten');
+      setGlobalSnackbar({
+        open: true,
+        message: error.response?.data?.error || 'Ein Fehler ist beim Erstellen der Stecklinge aufgetreten',
+        severity: 'error',
+        duration: 6000
+      })
     }
   };
 
-  // Aktualisierte handleDestroy Funktion
   const handleDestroy = async () => {
     try {
       if (selectedBatch && selectedPlants[selectedBatch.id]?.length > 0) {
@@ -680,24 +730,35 @@ export default function MotherPlantPage() {
         setOpenDestroyDialog(false);
         setSelectedBatch(null);
         
-        // Ausgewählte Pflanzen zurücksetzen
         setSelectedPlants(prev => ({
           ...prev,
           [selectedBatch.id]: []
         }));
         
-        // Daten aktualisieren
         refreshData();
+        
+        const memberName = members.find(m => m.id === destroyedByMemberId)?.display_name || "Unbekannt"
+        
+        setGlobalSnackbar({
+          open: true,
+          message: `Mutterpflanzen erfolgreich vernichtet - Autorisiert durch: ${memberName}`,
+          severity: 'success',
+          duration: 10000
+        })
       }
     } catch (error) {
       console.error('Fehler bei der Vernichtung:', error);
-      alert(error.response?.data?.error || 'Ein Fehler ist aufgetreten');
+      setGlobalSnackbar({
+        open: true,
+        message: error.response?.data?.error || 'Ein Fehler ist bei der Vernichtung aufgetreten',
+        severity: 'error',
+        duration: 6000
+      })
     }
   };
 
   const togglePlantSelection = (batchId, plantId) => {
     setSelectedPlants(prev => {
-      // Initialisiere das Array für diesen Batch, falls es noch nicht existiert
       const batchPlants = prev[batchId] || [];
       
       if (batchPlants.includes(plantId)) {
@@ -716,7 +777,6 @@ export default function MotherPlantPage() {
 
   const selectAllPlantsInBatch = (batchId, select) => {
     if (select) {
-      // Je nach Tab die richtigen Daten verwenden
       let plantsToSelect = [];
       
       if (tabValue === 0) {
@@ -738,10 +798,13 @@ export default function MotherPlantPage() {
   }
   
   const handleFilterApply = () => {
-    loadMotherBatches(1) // Zurück zur ersten Seite bei Filter-Änderung
-    if (tabValue === 1) {
-      loadCuttingBatches(1) // Auch Stecklings-Batches neu laden, wenn im entsprechenden Tab (jetzt Tab 1)
+    if (tabValue === 0 || tabValue === 2) {
+      loadMotherBatches(1);
+    } else if (tabValue === 1) {
+      loadCuttingBatches(1);
     }
+    
+    loadAllCounts();
   }
   
   const handleFilterReset = () => {
@@ -750,18 +813,17 @@ export default function MotherPlantPage() {
     setDayFilter('')
     setShowFilters(false)
     
-    // Entsprechend dem aktiven Tab neu laden
     if (tabValue === 0 || tabValue === 2) {
-      loadMotherBatches(1) // Für Tab 0 (Aktive) und Tab 2 (Vernichtete)
+      loadMotherBatches(1);
     } else if (tabValue === 1) {
-      loadCuttingBatches(1) // Für Tab 1 (Stecklinge)
+      loadCuttingBatches(1);
     }
+    
+    loadAllCounts();
   }
 
-  // Die Daten, die in der aktuellen Tabelle angezeigt werden sollen
   const displayedData = getDisplayedData();
 
-  // Aktualisierte Tabs-Definition mit separaten Zählern für Batches und Pflanzen
   const tabs = [
     { 
       label: (
@@ -782,14 +844,14 @@ export default function MotherPlantPage() {
             MUTTERPFLANZEN
           </Typography>
           <Typography component="span" sx={{ mx: 0.3, color: 'primary.main', fontWeight: 500, fontSize: '0.75rem' }}>
-            {`(${cuttingBatchCount})`} {/* Anzahl der Mutterpflanzen */}
+            {`(${cuttingBatchCount})`}
           </Typography>
           <ArrowForwardIcon sx={{ mx: 0.3, fontSize: 10, color: 'primary.main' }} />
           <Typography component="span" sx={{ fontWeight: 'bold', fontSize: '0.75rem' }}>
             ZU STECKLINGE
           </Typography>
           <Typography component="span" sx={{ mx: 0.3, color: 'primary.main', fontWeight: 500, fontSize: '0.75rem' }}>
-            {`(${cuttingCount})`} {/* Anzahl der Stecklinge */}
+            {`(${cuttingCount})`}
           </Typography>
         </Box>
       )
@@ -809,145 +871,262 @@ export default function MotherPlantPage() {
   ];
 
   return (
-    <Container maxWidth="xl" sx={{ width: '100%' }}>
-      <Fade in={true} timeout={800}>
-        <Box>
-          <PageHeader 
-            title="Mutterpflanzen-Verwaltung"
-            showFilters={showFilters}
-            setShowFilters={setShowFilters}
-          />
+    <Box sx={{ 
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden'
+    }}>
+      {/* Header mit Titel */}
+      <Box sx={{ 
+        p: 2, 
+        bgcolor: 'background.paper',
+        borderBottom: theme => `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }}>
+        <Typography variant="h5" sx={{ fontWeight: 500 }}>
+          Track & Trace Verwaltung: Step 2 - (Mutterpflanzen)
+        </Typography>
+        
+        {/* Filter-Button oben rechts */}
+        <Box
+          sx={{
+            border: theme => `1px solid ${alpha(theme.palette.divider, 0.3)}`,
+            borderRadius: '4px',
+            p: 0.75,
+            display: 'inline-flex',
+            alignItems: 'center',
+            backgroundColor: 'background.paper',
+            '&:hover': {
+              backgroundColor: theme => alpha(theme.palette.action.hover, 0.08),
+              borderColor: theme => theme.palette.divider
+            }
+          }}
+        >
+          <Button 
+            variant="text" 
+            color="inherit" 
+            onClick={() => setShowFilters(!showFilters)}
+            startIcon={<FilterListIcon />}
+            sx={{ 
+              textTransform: 'none', 
+              color: 'text.primary',
+              fontSize: '0.875rem'
+            }}
+          >
+            {showFilters ? 'Filter ausblenden' : 'Filter anzeigen'}
+          </Button>
         </Box>
-      </Fade>
-      
-      <Fade in={showFilters} timeout={400}>
-        <Box sx={{ display: showFilters ? 'block' : 'none' }}>
-          <FilterSection
-            yearFilter={yearFilter}
-            setYearFilter={setYearFilter}
-            monthFilter={monthFilter}
-            setMonthFilter={setMonthFilter}
-            dayFilter={dayFilter}
-            setDayFilter={setDayFilter}
-            onApply={handleFilterApply}
-            onReset={handleFilterReset}
-            showFilters={showFilters}
-          />
-        </Box>
-      </Fade>
+      </Box>
 
-      <TabsHeader 
-        tabValue={tabValue} 
-        onTabChange={handleTabChange} 
-        tabs={tabs}
-        color="primary"
-        ariaLabel="Mutterpflanzen-Tabs"
-      />
+      {/* Tabs - direkt anschließend ohne Lücke */}
+      <Box sx={{ flexShrink: 0 }}>
+        <TabsHeader 
+          tabValue={tabValue} 
+          onTabChange={handleTabChange} 
+          tabs={tabs}
+          color="primary"
+          ariaLabel="Mutterpflanzen-Tabs"
+        />
+      </Box>
 
-      {loading ? (
-        <LoadingIndicator />
-      ) : (
-        <>
-          <AnimatedTabPanel 
-            value={tabValue} 
-            index={0} 
-            animationType={animSettings.type} 
-            direction="right" 
-            duration={animSettings.duration}
-          >
-            <MotherPlantTable 
-              tabValue={0}
-              data={displayedData}
-              expandedBatchId={expandedBatchId}
-              onExpandBatch={handleAccordionChange}
-              onOpenDestroyDialog={handleOpenDestroyDialog}
-              onOpenCreateCuttingDialog={handleOpenCreateCuttingDialog}
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={handlePageChange}
-              batchPlants={batchPlants}
-              destroyedBatchPlants={destroyedBatchPlants}
-              plantsCurrentPage={plantsCurrentPage}
-              plantsTotalPages={plantsTotalPages}
-              destroyedPlantsCurrentPage={destroyedPlantsCurrentPage}
-              destroyedPlantsTotalPages={destroyedPlantsTotalPages}
-              onPlantsPageChange={handlePlantsPageChange}
-              onDestroyedPlantsPageChange={handleDestroyedPlantsPageChange}
-              selectedPlants={selectedPlants}
-              togglePlantSelection={togglePlantSelection}
-              selectAllPlantsInBatch={selectAllPlantsInBatch}
-              onOpenImageModal={handleOpenImageModal}
-              onOpenRatingDialog={handleOpenRatingDialog}
-            />
-          </AnimatedTabPanel>
-          
-          <AnimatedTabPanel 
-            value={tabValue} 
-            index={1} 
-            animationType={animSettings.type} 
-            direction="up" 
-            duration={animSettings.duration}
-          >
-            <MotherPlantTable 
-              tabValue={1}
-              data={displayedData}
-              expandedBatchId={expandedBatchId}
-              onExpandBatch={handleAccordionChange}
-              onOpenDestroyDialog={handleOpenDestroyDialog}
-              onOpenCreateCuttingDialog={handleOpenCreateCuttingDialog}
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={handlePageChange}
-              batchPlants={batchPlants}
-              destroyedBatchPlants={destroyedBatchPlants}
-              plantsCurrentPage={plantsCurrentPage}
-              plantsTotalPages={plantsTotalPages}
-              destroyedPlantsCurrentPage={destroyedPlantsCurrentPage}
-              destroyedPlantsTotalPages={destroyedPlantsTotalPages}
-              onPlantsPageChange={handlePlantsPageChange}
-              onDestroyedPlantsPageChange={handleDestroyedPlantsPageChange}
-              selectedPlants={selectedPlants}
-              togglePlantSelection={togglePlantSelection}
-              selectAllPlantsInBatch={selectAllPlantsInBatch}
-              onOpenImageModal={handleOpenImageModal}
-              onOpenRatingDialog={handleOpenRatingDialog}
-            />
-          </AnimatedTabPanel>
-          
-          <AnimatedTabPanel 
-            value={tabValue} 
-            index={2} 
-            animationType={animSettings.type} 
-            direction="left" 
-            duration={animSettings.duration}
-          >
-            <MotherPlantTable 
-              tabValue={2}
-              data={displayedData}
-              expandedBatchId={expandedBatchId}
-              onExpandBatch={handleAccordionChange}
-              onOpenDestroyDialog={handleOpenDestroyDialog}
-              onOpenCreateCuttingDialog={handleOpenCreateCuttingDialog}
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={handlePageChange}
-              batchPlants={batchPlants}
-              destroyedBatchPlants={destroyedBatchPlants}
-              plantsCurrentPage={plantsCurrentPage}
-              plantsTotalPages={plantsTotalPages}
-              destroyedPlantsCurrentPage={destroyedPlantsCurrentPage}
-              destroyedPlantsTotalPages={destroyedPlantsTotalPages}
-              onPlantsPageChange={handlePlantsPageChange}
-              onDestroyedPlantsPageChange={handleDestroyedPlantsPageChange}
-              selectedPlants={selectedPlants}
-              togglePlantSelection={togglePlantSelection}
-              selectAllPlantsInBatch={selectAllPlantsInBatch}
-              onOpenImageModal={handleOpenImageModal}
-              onOpenRatingDialog={handleOpenRatingDialog}
-            />
-          </AnimatedTabPanel>
-        </>
-      )}
+      {/* Hauptinhalt mit Scroll */}
+      <Box sx={{ 
+        flex: 1, 
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        position: 'relative'
+      }}>
+        {loading ? (
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            height: '100%'
+          }}>
+            <LoadingIndicator />
+          </Box>
+        ) : (
+          <Box sx={{ 
+            height: '100%', 
+            display: 'flex', 
+            flexDirection: 'column',
+            overflow: 'hidden'
+          }}>
+            <AnimatedTabPanel 
+              value={tabValue} 
+              index={0} 
+              animationType={animSettings.type} 
+              direction="right" 
+              duration={animSettings.duration}
+              sx={{ 
+                height: '100%', 
+                p: 0,
+                m: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden'
+              }}
+            >
+              <MotherPlantTable 
+                tabValue={0}
+                data={displayedData}
+                expandedBatchId={expandedBatchId}
+                onExpandBatch={handleAccordionChange}
+                onOpenDestroyDialog={handleOpenDestroyDialog}
+                onOpenCreateCuttingDialog={handleOpenCreateCuttingDialog}
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+                pageSize={pageSize}
+                onPageSizeChange={handlePageSizeChange}
+                pageSizeOptions={pageSizeOptions}
+                totalCount={totalCount}
+                batchPlants={batchPlants}
+                destroyedBatchPlants={destroyedBatchPlants}
+                plantsCurrentPage={plantsCurrentPage}
+                plantsTotalPages={plantsTotalPages}
+                destroyedPlantsCurrentPage={destroyedPlantsCurrentPage}
+                destroyedPlantsTotalPages={destroyedPlantsTotalPages}
+                onPlantsPageChange={handlePlantsPageChange}
+                onDestroyedPlantsPageChange={handleDestroyedPlantsPageChange}
+                selectedPlants={selectedPlants}
+                togglePlantSelection={togglePlantSelection}
+                selectAllPlantsInBatch={selectAllPlantsInBatch}
+                onOpenImageModal={handleOpenImageModal}
+                onOpenRatingDialog={handleOpenRatingDialog}
+                yearFilter={yearFilter}
+                setYearFilter={setYearFilter}
+                monthFilter={monthFilter}
+                setMonthFilter={setMonthFilter}
+                dayFilter={dayFilter}
+                setDayFilter={setDayFilter}
+                showFilters={showFilters}
+                setShowFilters={setShowFilters}
+                onFilterApply={handleFilterApply}
+                onFilterReset={handleFilterReset}
+              />
+            </AnimatedTabPanel>
+            
+            <AnimatedTabPanel 
+              value={tabValue} 
+              index={1} 
+              animationType={animSettings.type} 
+              direction="up" 
+              duration={animSettings.duration}
+              sx={{ 
+                height: '100%', 
+                p: 0,
+                m: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden'
+              }}
+            >
+              <MotherPlantTable 
+                tabValue={1}
+                data={displayedData}
+                expandedBatchId={expandedBatchId}
+                onExpandBatch={handleAccordionChange}
+                onOpenDestroyDialog={handleOpenDestroyDialog}
+                onOpenCreateCuttingDialog={handleOpenCreateCuttingDialog}
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+                pageSize={pageSize}
+                onPageSizeChange={handlePageSizeChange}
+                pageSizeOptions={pageSizeOptions}
+                totalCount={totalCount}
+                batchPlants={batchPlants}
+                destroyedBatchPlants={destroyedBatchPlants}
+                plantsCurrentPage={plantsCurrentPage}
+                plantsTotalPages={plantsTotalPages}
+                destroyedPlantsCurrentPage={destroyedPlantsCurrentPage}
+                destroyedPlantsTotalPages={destroyedPlantsTotalPages}
+                onPlantsPageChange={handlePlantsPageChange}
+                onDestroyedPlantsPageChange={handleDestroyedPlantsPageChange}
+                selectedPlants={selectedPlants}
+                togglePlantSelection={togglePlantSelection}
+                selectAllPlantsInBatch={selectAllPlantsInBatch}
+                onOpenImageModal={handleOpenImageModal}
+                onOpenRatingDialog={handleOpenRatingDialog}
+                yearFilter={yearFilter}
+                setYearFilter={setYearFilter}
+                monthFilter={monthFilter}
+                setMonthFilter={setMonthFilter}
+                dayFilter={dayFilter}
+                setDayFilter={setDayFilter}
+                showFilters={showFilters}
+                setShowFilters={setShowFilters}
+                onFilterApply={handleFilterApply}
+                onFilterReset={handleFilterReset}
+              />
+            </AnimatedTabPanel>
+            
+            <AnimatedTabPanel 
+              value={tabValue} 
+              index={2} 
+              animationType={animSettings.type} 
+              direction="left" 
+              duration={animSettings.duration}
+              sx={{ 
+                height: '100%', 
+                p: 0,
+                m: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden'
+              }}
+            >
+              <MotherPlantTable 
+                tabValue={2}
+                data={displayedData}
+                expandedBatchId={expandedBatchId}
+                onExpandBatch={handleAccordionChange}
+                onOpenDestroyDialog={handleOpenDestroyDialog}
+                onOpenCreateCuttingDialog={handleOpenCreateCuttingDialog}
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+                pageSize={pageSize}
+                onPageSizeChange={handlePageSizeChange}
+                pageSizeOptions={pageSizeOptions}
+                totalCount={totalCount}
+                batchPlants={batchPlants}
+                destroyedBatchPlants={destroyedBatchPlants}
+                plantsCurrentPage={plantsCurrentPage}
+                plantsTotalPages={plantsTotalPages}
+                destroyedPlantsCurrentPage={destroyedPlantsCurrentPage}
+                destroyedPlantsTotalPages={destroyedPlantsTotalPages}
+                onPlantsPageChange={handlePlantsPageChange}
+                onDestroyedPlantsPageChange={handleDestroyedPlantsPageChange}
+                selectedPlants={selectedPlants}
+                togglePlantSelection={togglePlantSelection}
+                selectAllPlantsInBatch={selectAllPlantsInBatch}
+                onOpenImageModal={handleOpenImageModal}
+                onOpenRatingDialog={handleOpenRatingDialog}
+                yearFilter={yearFilter}
+                setYearFilter={setYearFilter}
+                monthFilter={monthFilter}
+                setMonthFilter={setMonthFilter}
+                dayFilter={dayFilter}
+                setDayFilter={setDayFilter}
+                showFilters={showFilters}
+                setShowFilters={setShowFilters}
+                onFilterApply={handleFilterApply}
+                onFilterReset={handleFilterReset}
+              />
+            </AnimatedTabPanel>
+          </Box>
+        )}
+      </Box>
 
       <Fade in={openDestroyDialog} timeout={500}>
         <div style={{ display: openDestroyDialog ? 'block' : 'none' }}>
@@ -1012,7 +1191,6 @@ export default function MotherPlantPage() {
         ]}
       />
 
-      {/* Rating Dialog bleibt erhalten */}
       <RatingDialog
         open={openRatingDialog}
         onClose={handleCloseRatingDialog}
@@ -1020,6 +1198,23 @@ export default function MotherPlantPage() {
         plant={selectedPlantForRating}
         onRatingCreated={handleCloseRatingDialog}
       />
-    </Container>
+      
+      {/* Globale Snackbar-Komponente */}
+      <Snackbar 
+        open={globalSnackbar.open} 
+        autoHideDuration={globalSnackbar.duration || 6000} 
+        onClose={handleCloseGlobalSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={handleCloseGlobalSnackbar} 
+          severity={globalSnackbar.severity} 
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {globalSnackbar.message}
+        </Alert>
+      </Snackbar>
+    </Box>
   )
 }

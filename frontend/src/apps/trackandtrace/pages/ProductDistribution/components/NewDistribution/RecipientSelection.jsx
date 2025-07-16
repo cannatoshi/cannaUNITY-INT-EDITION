@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import {
   Box, Typography, Paper, Button, CircularProgress,
   Avatar, Chip, Alert, Card, CardContent,
-  Divider, LinearProgress, Fade, Zoom
+  Divider, LinearProgress, Fade, Zoom, alpha
 } from '@mui/material'
 import PersonIcon from '@mui/icons-material/Person'
 import CreditCardIcon from '@mui/icons-material/CreditCard'
@@ -282,9 +282,10 @@ export default function RecipientSelection({
             justifyContent: 'center',
             alignItems: 'center',
             minHeight: 440,
-            bgcolor: 'grey.50',
-            borderRadius: 2,
-            p: 3
+            bgcolor: theme => theme.palette.background.paper,
+            borderRadius: 1,
+            p: 3,
+            border: theme => `1px solid ${alpha(theme.palette.divider, 0.08)}`
           }}
         >
           <Box textAlign="center" maxWidth={500}>
@@ -309,7 +310,7 @@ export default function RecipientSelection({
                 maxWidth: 400
               }}
             >
-              RFID-Scan starten
+              RFID-SCAN STARTEN
             </Button>
           </Box>
         </Box>
@@ -332,18 +333,25 @@ export default function RecipientSelection({
           <Box sx={{ display: 'flex', gap: 3, width: '100%' }}>
             {/* Mitgliedsdaten & Limits */}
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Paper elevation={2} sx={{
+              <Paper elevation={0} sx={{
                 p: 2,
                 display: 'flex',
                 flexDirection: 'column',
-                bgcolor: 'grey.50',
-                boxShadow: '0 2px 12px 0 rgb(0 0 0 / 5%)',
+                bgcolor: theme => theme.palette.background.paper,
+                border: theme => `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+                borderRadius: 1,
                 minHeight: 420
               }}>
                 <Typography variant="subtitle1" gutterBottom fontWeight="bold">
                   Mitgliedsdaten & Limits
                 </Typography>
-                <Card variant="outlined" sx={{ flex: 1, display: 'flex', flexDirection: 'column', mt: 2 }}>
+                <Card variant="outlined" sx={{ 
+                  flex: 1, 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  mt: 2,
+                  border: theme => `1px solid ${alpha(theme.palette.divider, 0.08)}`
+                }}>
                   <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                     <Box display="flex" alignItems="center" mb={2}>
                       <Box flexGrow={1}>
@@ -372,7 +380,7 @@ export default function RecipientSelection({
                       flexWrap: 'wrap',
                       justifyContent: 'space-between',
                       mb: 2,
-                      bgcolor: 'grey.50',
+                      bgcolor: theme => alpha(theme.palette.grey[500], 0.04),
                       borderRadius: 1,
                       overflow: 'hidden'
                     }}>
@@ -416,7 +424,7 @@ export default function RecipientSelection({
                             flexDirection: 'column',
                             alignItems: 'center',
                             borderRight: idx < 4 ? '1px solid' : 'none',
-                            borderColor: 'divider',
+                            borderColor: theme => alpha(theme.palette.divider, 0.08),
                             minWidth: 100
                           }}
                         >
@@ -475,14 +483,15 @@ export default function RecipientSelection({
 
             {/* Ausgabenhistorie & Verbrauch */}
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Paper elevation={2} sx={{
+              <Paper elevation={0} sx={{
                 p: 3,
                 minHeight: 380,
                 height: '100%',
                 display: 'flex',
                 flexDirection: 'column',
-                bgcolor: 'grey.50',
-                boxShadow: '0 2px 12px 0 rgb(0 0 0 / 5%)'
+                bgcolor: theme => theme.palette.background.paper,
+                border: theme => `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+                borderRadius: 1
               }}>
                 <Typography variant="subtitle1" gutterBottom fontWeight="bold">
                   Ausgabenhistorie & Verbrauch
@@ -492,7 +501,8 @@ export default function RecipientSelection({
                   mt: 2,
                   flex: 1,
                   display: 'flex',
-                  flexDirection: 'column'
+                  flexDirection: 'column',
+                  border: theme => `1px solid ${alpha(theme.palette.divider, 0.08)}`
                 }}>
                   <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                     {loadingHistory ? (
@@ -506,7 +516,7 @@ export default function RecipientSelection({
                             display: 'grid',
                             gridTemplateColumns: 'repeat(4, 1fr)',
                             gap: 2,
-                            alignItems: 'stretch',  // sorgt für gleiche Höhe
+                            alignItems: 'stretch',
                             mt: 2
                           }}
                         >
@@ -546,7 +556,7 @@ export default function RecipientSelection({
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 p: 2,
-                                height: '100%'          // füllt die Grid-Zelle komplett aus
+                                height: '100%'
                               }}
                             >
                               <Box sx={{ color: 'success.main', mb: 1 }}>{card.icon}</Box>
@@ -651,7 +661,7 @@ export default function RecipientSelection({
             </Box>
           </Box>
 
-          {/* 🆕 Button-Zeile unter den beiden Karten */}
+          {/* Button-Zeile unter den beiden Karten */}
           <Box sx={{ display: 'flex', gap: 3, mt: 2 }}>
             <Button
               variant="contained"

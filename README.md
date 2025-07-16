@@ -185,7 +185,7 @@ Optional > Push Gateway: Lokaler Server → Mini-API auf VPS → schiebt Daten a
 ## 🔁 UUID Track & Trace: Vom Samen bis zur Ausgabe inkl. MMS
 
 <p align="center">
-  <img src="screenshots/trackandtrace/samen_einkauf_liste.png" alt="Vorschau" width="1920">
+  <img src="screenshots/trackandtrace/samen_verwaltung_aktiv.png" alt="Vorschau" width="1920">
 </p>
 
 Jeder Verarbeitungsschritt ist dokumentiert und manipulationssicher protokolliert:

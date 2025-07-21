@@ -96,8 +96,10 @@ Kernpunkte sind u.a.:
 - ✅ Echtzeit UUID-Track & Trace von Pflanzen, Verarbeitung & Produktausgabe
 - ✅ Erzeugung von Batch und Chargenummern inkl. 128 Bit UUID Anbindung
 - ✅ Native Android, IOS & Windows APP
+- ✅ Matrix 2.0 Protocol Integration + Element X Intregration
 - ✅ WordPress oder Joomla CMS Online Anbindung über ZKP/SSH Tunnel
 - ✅ Digitalisierte Produktausgabe mit Limitkontrolle
+- ✅ Verschlüsselte Mitgliederkommunikation - Ende-zu-Ende verschlüsselte Gruppen-Chats
 - ✅ RFID/NFC Arbeitszeiterfassung mit Minijob/Pflichtstunden & Ehrenamt Erkennung
 - ✅ Automatische KI Personenerkennung per UniFi Protect AI Key API / Webhook Anbindung
 - ✅ Dynamische Mitgliederprofile mit UUID RFID Ausweisen inkl. Evolis Kartendruckeranbindung
@@ -133,7 +135,7 @@ Kernpunkte sind u.a.:
 - **Frontend:** React + Vite + Material UI (SPA)
 - **Datenmodell:** Multi-Chain ForeignKey-Verknüpfung aller Track&Trace-Objekte (von der Verpackungseinheit bis zur Ur-Saat oder Mutterpflanze), mit dynamischer UI-Filterung und garantiert konsistenter Herkunftskette. Einzigartige Flexibilität, maximale Nachvollziehbarkeit.
 - **Schnittstellen:** UniFi Access/Protect (native), Wordpress, Joomla, Siemens SIMATIC S7 1200 G2, Loxone Mini Server, Agilent 1260 Infinity HPLC, TSC TC200, Evolis Primacy, MQTTS, REST, 
-- **Technologien:** TokenAuth, WebSocket, Axios, passkey-auth, Container-kompatibel
+- **Technologien:** TokenAuth, Matrix 2.0, WebSocket, Axios, passkey-auth, Container-kompatibel
 
 ```
 flowchart LR
@@ -271,10 +273,11 @@ Die SIMATIC G2 hingegen ermöglicht erstmals die vollständige Steuerung industr
 🔌 Highlights der SIMATIC G2 Integration
 ✅ Web-API mit strukturierter REST-Kommunikation (HTTPS, JSON)
 ✅ MQTT-Anbindung mit Topic-Flexibilität über LMQTT_FB
-✅ TLS-Verschlüsselung, Multisession, Authentifizierung
+✅ Matrix 2.0 & TLS Verschlüsselung, Multisession, Authentifizierung, 
 ✅ Zeitschalt-, Rampen- und Szenensteuerung über Django konfigurierbar
 ✅ UUID-basierte Verknüpfung jeder SPS zu einem Raumobjekt
 ✅ Redundanter Autonomiebetrieb: Räume funktionieren auch ohne Zentrale
+✅ Unveränderliche Audit-Trails - Blockchain-ähnliche Event-Ketten für Behörden-Compliance
 
 🌞 0–10 V Lichtsteuerung & Tageslichtprofile
 Über das SM1232-AQ Analogausgangsmodul steuert cannaUNITY sämtliche 0–10 V LED-Growlampen energieeffizient und dynamisch – direkt aus dem zentralen UI. Die Lichtprofile beinhalten Sonnenaufgangs- und Sonnenuntergangssimulationen mit fein abgestufter Dimmung bis auf exakt 0 %, was viele andere Systeme technisch nicht unterstützen.
@@ -328,7 +331,7 @@ Unterstützte Funktionen & Module:
 5. RFID-Autorisierung über UniFi Access – Manipulationssichere Dokumentation aller Aktionen
 6. Medien-Verwaltung – Multi-Image Support mit Metadaten & Drag & Drop
 7. Einkaufs-Aggregation – Chargenübergreifende Bestandsermittlung
-8. Audit-Trail – Lückenlose Änderungshistorie für Compliance
+8. Unveränderliche Audit-Trails – Lückenlose Änderungshistorie für Compliance
 9. API-Schnittstellen – REST-basierte Kommunikation zwischen Systemen
 10. Echtzeit-Metriken – Verfügbare Samen, Pflanzenkonvertierungen, Verluste
 
@@ -405,12 +408,18 @@ cannaUNITY/
 - **Audit Logging**: PostgreSQL Event Triggers → Kafka → Elasticsearch, WORM-Storage für Compliance
 
 ### 🔒 Security Hardening & Compliance
+- **Matrix Protocol Security**: E2EE via Olm/Megolm, Double Ratchet Algorithm, Ed25519 Signatures, Cross-Signing für Device Verification, Immutable Event DAG
 - **TLS Configuration**: TLS 1.3 only, HSTS mit Preloading, Certificate Transparency Monitoring
 - **API Security**: OAuth 2.1 (draft-ietf-oauth-v2-1-09), PKCE mandatory, DPoP für Token Binding
 - **Rate Limiting**: Token Bucket Algorithm (nginx-limit-req), Distributed mit Redis, Adaptive Thresholds
 - **Geo-Restrictions**: MaxMind GeoIP2 mit Precision City, Haversine Distance Calculation, Configurable Radius
 - **DSGVO/GDPR**: Privacy by Design (Art. 25), Pseudonymisierung (Art. 4), Right to Erasure via Crypto-Shredding
 - **Penetration Testing**: OWASP MASVS Level 2 konform, regelmäßige Security Audits mit Metasploit/Burp Suite
+
+cannaUNITY revolutioniert die Cannabis-Vereinsverwaltung durch die Integration des Matrix-Protokolls. Mit Synapse als Server-Backend und Element X als Client entsteht eine zukunftssichere Infrastruktur für Track & Trace und Mitgliederkommunikation.
+
+Hinweis:
+Diese Integration befindet sich in aktiver Entwicklung und schafft neue Maßstäbe für Datenschutz und Manipulationssicherheit in der Cannabis-Branche.
 
 ---
 

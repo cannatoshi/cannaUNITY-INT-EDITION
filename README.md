@@ -19,14 +19,6 @@
 
 ---
 
-(Touchscreen Ansicht "Produktausgabe" für "festes" UI Panel 1920x1080p)
-
-<p align="center">
-  <img src="screenshots/touchscreen-ui/produktausgabe_kiosk_modus_step_1.png" alt="Vorschau" width="1920">
-</p>
-
----
-
 ## 📦 Was ist cannaUNITY?
 
 **cannaUNITY** ist ein professionelles Open-Source-Framework zur Organisation, Verwaltung und Automatisierung von Cannabis-Anbauvereinigungen gemäß Konsumcannabisgesetz (KCanG).

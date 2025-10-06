@@ -1,5 +1,4 @@
 # 🌿 cannaUNITY v0.6.20 (Pre-Alpha)
-(Welcome to the finest butter‑bot of highend Cannabis Social Club software.)
 
 ![GitHub Repo stars](https://img.shields.io/github/stars/saschadaemgen/cannaUNITY?style=social)
 ![GitHub license](https://img.shields.io/github/license/saschadaemgen/cannaUNITY)

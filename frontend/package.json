@@ -16,8 +16,8 @@
     "@mui/icons-material": "^7.3.5",
     "@mui/lab": "^7.0.0-beta.17",
     "@mui/material": "^7.1.0",
-    "@mui/x-data-grid": "^8.18.0",
-    "@mui/x-date-pickers": "^8.18.0",
+    "@mui/x-data-grid": "^8.19.0",
+    "@mui/x-date-pickers": "^8.19.0",
     "axios": "^1.13.2",
     "date-fns": "^4.1.0",
     "dayjs": "^1.11.19",
@@ -37,15 +37,15 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
-    "@types/react": "^19.2.5",
+    "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
-    "glob": "^12.0.0",
+    "glob": "^13.0.0",
     "globals": "^16.5.0",
     "rollup-plugin-visualizer": "^6.0.5",
-    "vite": "^7.2.2"
+    "vite": "^7.2.4"
   }
 }

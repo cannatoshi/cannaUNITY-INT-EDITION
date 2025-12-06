@@ -7,6 +7,10 @@
 ![Encryption Badge](https://img.shields.io/badge/Encryption-AES--256-blue)
 ![GDPR Badge](https://img.shields.io/badge/GDPR-Compliant-brightgreen)
 
+<p align="center">
+  <img src="screenshots/touchscreen-ui/produktausgabe_kiosk_modus_step_1.png" alt="Preview" width="1920">
+</p>
+
 > **Modular Open-Source Software Framework for Cannabis Social Clubs and Cultivation Associations in accordance with the German Consumer Cannabis Act § (KCanG)**
 > Member Management · eAssociation Management · Report Management · Task Planning · Grow Controller · Access Control · eTimecard · Track & Trace · Accounting · Inventory Management · Room Automation · Security System · iOS & Android APP · Administration, Admin and User UIs
 
